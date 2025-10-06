@@ -194,8 +194,7 @@ export function TaskBoard() {
     wsConnected,
     currentUser?.id,
     currentProject?.id,
-    joinProject,
-    leaveProject,
+    // Removed joinProject and leaveProject from dependencies to prevent spam
   ]);
 
   // Load current user's internal ID when component mounts

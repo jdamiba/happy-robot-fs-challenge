@@ -50,6 +50,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     | null
   >(null);
   const userSetRef = useRef<boolean>(false);
+  const currentProjectRef = useRef<string | null>(null);
+  const hasJoinedProjectRef = useRef<boolean>(false);
 
   const {
     wsConnected,
@@ -193,8 +195,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           timestamp: new Date().toISOString(),
         });
 
-        // Reset user set flag when connection is lost
+        // Reset state when connection is lost
         userSetRef.current = false;
+        currentProjectRef.current = null;
+        hasJoinedProjectRef.current = false;
         setWsConnected(false);
         isConnectingRef.current = false;
 
@@ -254,8 +258,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       wsRef.current = null;
     }
 
-    // Reset user set flag when disconnecting
+    // Reset state when disconnecting
     userSetRef.current = false;
+    currentProjectRef.current = null;
+    hasJoinedProjectRef.current = false;
     setWsConnected(false);
     isConnectingRef.current = false;
   }, [setWsConnected]);
@@ -317,6 +323,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const joinProject = useCallback(
     (projectId: string, userId?: string) => {
+      // Prevent duplicate joins to the same project
+      if (
+        currentProjectRef.current === projectId &&
+        hasJoinedProjectRef.current
+      ) {
+        console.log(
+          "Already joined project:",
+          projectId,
+          "- skipping duplicate join"
+        );
+        return;
+      }
+
       console.log("joinProject called with:", projectId, "userId:", userId);
 
       // Ensure user is set before joining project
@@ -325,6 +344,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         setUser(userId, userInfo);
       }
 
+      // Leave previous project if switching
+      if (
+        currentProjectRef.current &&
+        currentProjectRef.current !== projectId
+      ) {
+        console.log("Leaving previous project:", currentProjectRef.current);
+        sendMessage({
+          type: "LEAVE_PROJECT",
+          projectId: currentProjectRef.current,
+          userId: userId,
+          operationId: `leave-${Date.now()}`,
+          timestamp: Date.now(),
+        });
+      }
+
+      // Join new project
       sendMessage({
         type: "JOIN_PROJECT",
         projectId: projectId,
@@ -332,12 +367,25 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         operationId: `join-${Date.now()}`,
         timestamp: Date.now(),
       });
+
+      // Update state tracking
+      currentProjectRef.current = projectId;
+      hasJoinedProjectRef.current = true;
     },
     [sendMessage, setUser, userInfo]
   );
 
   const leaveProject = useCallback(
     (projectId: string, userId?: string) => {
+      // Only leave if we're actually in this project
+      if (
+        currentProjectRef.current !== projectId ||
+        !hasJoinedProjectRef.current
+      ) {
+        console.log("Not currently in project:", projectId, "- skipping leave");
+        return;
+      }
+
       console.log("leaveProject called with:", projectId, "userId:", userId);
       sendMessage({
         type: "LEAVE_PROJECT",
@@ -346,6 +394,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         operationId: `leave-${Date.now()}`,
         timestamp: Date.now(),
       });
+
+      // Update state tracking
+      currentProjectRef.current = null;
+      hasJoinedProjectRef.current = false;
     },
     [sendMessage]
   );
