@@ -99,6 +99,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               timestamp: Date.now(),
             });
           }, 100);
+        } else {
+          console.log("No userId provided to WebSocket connection");
         }
       };
 

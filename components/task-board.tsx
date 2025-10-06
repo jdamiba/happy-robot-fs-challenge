@@ -139,13 +139,31 @@ export function TaskBoard() {
       };
 
       loadTasks();
-      joinProject(currentProject.id, currentUser?.id);
+    }
+  }, [currentProject?.id, setTasks]); // Only depend on stable values
+
+  // Join project when WebSocket is connected and user is available
+  useEffect(() => {
+    if (wsConnected && currentUser?.id && currentProject?.id) {
+      console.log("Joining project with WebSocket connected:", {
+        projectId: currentProject.id,
+        userId: currentUser.id,
+        wsConnected,
+      });
+      joinProject(currentProject.id, currentUser.id);
 
       return () => {
-        leaveProject(currentProject.id, currentUser?.id);
+        console.log("Leaving project:", currentProject.id);
+        leaveProject(currentProject.id, currentUser.id);
       };
     }
-  }, [currentProject?.id, setTasks, joinProject, leaveProject, currentUser]); // Only depend on stable values
+  }, [
+    wsConnected,
+    currentUser?.id,
+    currentProject?.id,
+    joinProject,
+    leaveProject,
+  ]);
 
   // Load current user's internal ID when component mounts
   useEffect(() => {
