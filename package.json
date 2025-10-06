@@ -6,9 +6,10 @@
     "dev": "next dev --turbopack",
     "dev:ws": "tsx lib/websocket-server.ts",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:ws\"",
-    "build": "next build --turbopack",
+    "build": "prisma generate && next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.33.1",
