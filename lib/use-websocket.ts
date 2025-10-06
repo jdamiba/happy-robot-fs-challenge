@@ -38,6 +38,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false);
+  const setUserRef = useRef<((userId: string) => void) | null>(null);
 
   const {
     wsConnected,
@@ -87,15 +88,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         isConnectingRef.current = false;
         reconnectAttemptsRef.current = 0;
 
-        // Set user ID if provided
+        // Set user ID if provided (with a small delay to ensure WebSocket is fully ready)
         if (userId) {
-          console.log("Setting user ID on WebSocket connection:", userId);
-          sendMessage({
-            type: "SET_USER",
-            payload: { userId },
-            operationId: `set-user-${Date.now()}`,
-            timestamp: Date.now(),
-          });
+          setTimeout(() => {
+            console.log("Setting user ID on WebSocket connection:", userId);
+            sendMessage({
+              type: "SET_USER",
+              payload: { userId },
+              operationId: `set-user-${Date.now()}`,
+              timestamp: Date.now(),
+            });
+          }, 100);
         }
       };
 
@@ -148,10 +151,24 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               };
               handleUserPresence(presencePayload);
               break;
+
+            case "CONNECTION_ESTABLISHED":
+              console.log("WebSocket connection established on server side");
+              // Optionally set user ID here if we have one
+              if (userId && setUserRef.current) {
+                console.log(
+                  "Setting user ID after connection established:",
+                  userId
+                );
+                setUserRef.current(userId);
+              }
+              break;
+
             case "ERROR":
               const errorPayload = message.payload as { error: string };
               console.error("WebSocket error:", errorPayload.error);
               break;
+
             default:
               console.log("Unknown message type:", message.type);
           }
@@ -284,6 +301,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const setUser = useCallback(
     (userId: string) => {
+      console.log("setUser called with:", userId);
       sendMessage({
         type: "SET_USER",
         payload: { userId },
@@ -293,6 +311,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     },
     [sendMessage]
   );
+
+  // Store setUser in ref so it can be accessed in connect function
+  setUserRef.current = setUser;
+
+  // Call setUser when userId changes after WebSocket is connected
+  useEffect(() => {
+    if (wsConnected && userId) {
+      console.log("userId changed, calling setUser:", userId);
+      setUser(userId);
+    }
+  }, [userId, wsConnected, setUser]);
 
   // Connect on mount with a small delay to ensure page is ready
   useEffect(() => {

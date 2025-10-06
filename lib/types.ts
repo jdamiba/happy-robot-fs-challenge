@@ -86,6 +86,7 @@ export interface WebSocketMessage {
     | "LEAVE_PROJECT"
     | "SET_USER"
     | "USER_PRESENCE"
+    | "CONNECTION_ESTABLISHED"
     | "ERROR";
   payload?: unknown;
   projectId?: string;

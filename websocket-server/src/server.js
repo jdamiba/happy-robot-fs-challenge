@@ -281,8 +281,8 @@ function handleMessage(clientId, message) {
 
   switch (message.type) {
     case "SET_USER":
-      client.userId = message.userId;
-      console.log(`Client ${clientId} set user: ${message.userId}`);
+      client.userId = message.payload?.userId || message.userId;
+      console.log(`Client ${clientId} set user: ${client.userId}`);
 
       // Broadcast user presence for all projects this client is in
       client.projectRooms.forEach((projectId) => {
@@ -291,6 +291,11 @@ function handleMessage(clientId, message) {
       break;
 
     case "JOIN_PROJECT":
+      // Set user ID if provided in the message
+      if (message.userId) {
+        client.userId = message.userId;
+        console.log(`Client ${clientId} set user: ${message.userId}`);
+      }
       joinProject(clientId, message.projectId);
       break;
 
