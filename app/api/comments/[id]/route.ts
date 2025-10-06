@@ -3,6 +3,7 @@ import { CommentService, TaskService } from "@/lib/db";
 import { UpdateCommentSchema } from "@/lib/types";
 import { websocketClient } from "@/lib/websocket-client";
 import { generateOperationId } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/auth-utils";
 
 interface RouteParams {
   params: Promise<{
@@ -61,13 +62,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
 
       try {
-        await websocketClient.broadcastCommentUpdate(task.projectId, {
-          id: comment.id,
-          taskId: comment.taskId,
-          changes: validatedData,
-          operationId: generateOperationId(),
-          timestamp: Date.now(),
-        });
+        // Get the current user for broadcasting
+        const user = await getCurrentUser();
+
+        await websocketClient.broadcastCommentUpdate(
+          task.projectId,
+          {
+            id: comment.id,
+            taskId: comment.taskId,
+            changes: validatedData,
+            operationId: generateOperationId(),
+            timestamp: Date.now(),
+          },
+          user?.id
+        );
         console.log("Comment update broadcast successful");
       } catch (broadcastError) {
         console.error("Failed to broadcast comment update:", broadcastError);
@@ -106,8 +114,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
+    console.log("DELETE comment request:", { commentId: id });
+
     const comment = await CommentService.findById(id);
+    console.log(
+      "Comment found:",
+      comment ? { id: comment.id, taskId: comment.taskId } : null
+    );
+
     if (!comment) {
+      console.log("Comment not found for deletion:", id);
       return NextResponse.json(
         {
           success: false,
@@ -130,9 +146,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       });
 
       try {
+        // Get the current user for broadcasting
+        const user = await getCurrentUser();
+
         await websocketClient.broadcastCommentDelete(
           task.projectId,
-          comment.id
+          comment.id,
+          user?.id
         );
         console.log("Comment deletion broadcast successful");
       } catch (broadcastError) {

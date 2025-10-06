@@ -3,6 +3,7 @@ import { TaskService } from "@/lib/db";
 import { UpdateTaskSchema } from "@/lib/types";
 import { websocketClient } from "@/lib/websocket-client";
 import { generateOperationId } from "@/lib/utils";
+import { getCurrentUser } from "@/lib/auth-utils";
 
 interface RouteParams {
   params: Promise<{
@@ -57,13 +58,20 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     try {
-      await websocketClient.broadcastTaskUpdate(task.projectId, {
-        id: task.id,
-        projectId: task.projectId,
-        changes: validatedData,
-        operationId: generateOperationId(),
-        timestamp: Date.now(),
-      });
+      // Get the current user for broadcasting
+      const user = await getCurrentUser();
+
+      await websocketClient.broadcastTaskUpdate(
+        task.projectId,
+        {
+          id: task.id,
+          projectId: task.projectId,
+          changes: validatedData,
+          operationId: generateOperationId(),
+          timestamp: Date.now(),
+        },
+        user?.id
+      );
       console.log("Task update broadcast successful");
     } catch (broadcastError) {
       console.error("Failed to broadcast task update:", broadcastError);
@@ -114,8 +122,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     await TaskService.delete(id);
 
+    // Get the current user for broadcasting
+    const user = await getCurrentUser();
+
     // Broadcast task deletion to WebSocket clients
-    await websocketClient.broadcastTaskDelete(task.projectId, id);
+    await websocketClient.broadcastTaskDelete(task.projectId, id, user?.id);
 
     return NextResponse.json({
       success: true,

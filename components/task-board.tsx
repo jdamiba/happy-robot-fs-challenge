@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { ActiveUsers } from "./active-users";
 import {
   Plus,
   ArrowLeft,
@@ -100,6 +101,7 @@ export function TaskBoard() {
   } = useAppStore();
 
   const { joinProject, leaveProject } = useWebSocket();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTask, setNewTask] = useState({
     title: "",
@@ -135,13 +137,28 @@ export function TaskBoard() {
       };
 
       loadTasks();
-      joinProject(currentProject.id);
+      joinProject(currentProject.id, currentUser?.id);
 
       return () => {
-        leaveProject(currentProject.id);
+        leaveProject(currentProject.id, currentUser?.id);
       };
     }
-  }, [currentProject?.id, setTasks, joinProject, leaveProject]); // Only depend on stable values
+  }, [currentProject?.id, setTasks, joinProject, leaveProject, currentUser]); // Only depend on stable values
+
+  // Load current user's internal ID when component mounts
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await apiClient.getCurrentUser();
+        if (response.success && response.data) {
+          setCurrentUser(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,6 +306,9 @@ export function TaskBoard() {
           </Button>
         </div>
       </div>
+
+      {/* Active Users */}
+      <ActiveUsers />
 
       {showCreateForm && (
         <Card>

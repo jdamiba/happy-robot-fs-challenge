@@ -47,6 +47,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     handleCommentUpdate,
     handleCommentCreate,
     handleCommentDelete,
+    handleUserPresence,
   } = useAppStore();
 
   const connect = useCallback(() => {
@@ -120,6 +121,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                 commentDeletePayload.taskId,
                 commentDeletePayload.id
               );
+              break;
+            case "USER_PRESENCE":
+              console.log("Received USER_PRESENCE:", message.payload);
+              const presencePayload = message.payload as {
+                projectId: string;
+                activeUsers: Array<{
+                  userId: string;
+                  clientId: string;
+                  joinedAt: number;
+                }>;
+                userCount: number;
+              };
+              handleUserPresence(presencePayload);
               break;
             case "ERROR":
               const errorPayload = message.payload as { error: string };
@@ -228,11 +242,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   );
 
   const joinProject = useCallback(
-    (projectId: string) => {
-      console.log("joinProject called with:", projectId);
+    (projectId: string, userId?: string) => {
+      console.log("joinProject called with:", projectId, "userId:", userId);
       sendMessage({
         type: "JOIN_PROJECT",
         projectId: projectId,
+        userId: userId,
         operationId: `join-${Date.now()}`,
         timestamp: Date.now(),
       });
@@ -241,10 +256,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   );
 
   const leaveProject = useCallback(
-    (projectId: string) => {
+    (projectId: string, userId?: string) => {
+      console.log("leaveProject called with:", projectId, "userId:", userId);
       sendMessage({
         type: "LEAVE_PROJECT",
         projectId: projectId,
+        userId: userId,
         operationId: `leave-${Date.now()}`,
         timestamp: Date.now(),
       });

@@ -66,11 +66,16 @@ class WebSocketClientService {
   /**
    * Broadcast task creation to all clients in the project
    */
-  async broadcastTaskCreate(projectId: string, task: unknown): Promise<void> {
+  async broadcastTaskCreate(
+    projectId: string,
+    task: unknown,
+    userId?: string
+  ): Promise<void> {
     await this.sendMessage({
       type: "TASK_CREATE",
       payload: task,
       projectId,
+      userId,
       operationId: `task-create-${Date.now()}`,
       timestamp: Date.now(),
     });
@@ -79,11 +84,16 @@ class WebSocketClientService {
   /**
    * Broadcast task update to all clients in the project
    */
-  async broadcastTaskUpdate(projectId: string, update: unknown): Promise<void> {
+  async broadcastTaskUpdate(
+    projectId: string,
+    update: unknown,
+    userId?: string
+  ): Promise<void> {
     await this.sendMessage({
       type: "TASK_UPDATE",
       payload: update,
       projectId,
+      userId,
       operationId: `task-update-${Date.now()}`,
       timestamp: Date.now(),
     });
@@ -92,11 +102,16 @@ class WebSocketClientService {
   /**
    * Broadcast task deletion to all clients in the project
    */
-  async broadcastTaskDelete(projectId: string, taskId: string): Promise<void> {
+  async broadcastTaskDelete(
+    projectId: string,
+    taskId: string,
+    userId?: string
+  ): Promise<void> {
     await this.sendMessage({
       type: "TASK_DELETE",
       payload: { taskId },
       projectId,
+      userId,
       operationId: `task-delete-${Date.now()}`,
       timestamp: Date.now(),
     });
@@ -107,12 +122,14 @@ class WebSocketClientService {
    */
   async broadcastCommentCreate(
     projectId: string,
-    comment: unknown
+    comment: unknown,
+    userId?: string
   ): Promise<void> {
     await this.sendMessage({
       type: "COMMENT_CREATE",
       payload: comment,
       projectId,
+      userId,
       operationId: `comment-create-${Date.now()}`,
       timestamp: Date.now(),
     });
@@ -123,12 +140,14 @@ class WebSocketClientService {
    */
   async broadcastCommentUpdate(
     projectId: string,
-    update: unknown
+    update: unknown,
+    userId?: string
   ): Promise<void> {
     await this.sendMessage({
       type: "COMMENT_UPDATE",
       payload: update,
       projectId,
+      userId,
       operationId: `comment-update-${Date.now()}`,
       timestamp: Date.now(),
     });
@@ -139,12 +158,14 @@ class WebSocketClientService {
    */
   async broadcastCommentDelete(
     projectId: string,
-    commentId: string
+    commentId: string,
+    userId?: string
   ): Promise<void> {
     await this.sendMessage({
       type: "COMMENT_DELETE",
       payload: { id: commentId },
       projectId,
+      userId,
       operationId: `comment-delete-${Date.now()}`,
       timestamp: Date.now(),
     });

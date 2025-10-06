@@ -53,8 +53,19 @@ function joinProject(clientId, projectId) {
   }
   projectRooms.get(projectId).add(clientId);
 
-  console.log(`✅ Client ${clientId} (user: ${client.userId || 'unknown'}) joined project ${projectId}`);
-  console.log(`📊 Project ${projectId} now has ${projectRooms.get(projectId).size} clients`);
+  console.log(
+    `✅ Client ${clientId} (user: ${
+      client.userId || "unknown"
+    }) joined project ${projectId}`
+  );
+  console.log(
+    `📊 Project ${projectId} now has ${
+      projectRooms.get(projectId).size
+    } clients`
+  );
+
+  // Broadcast user presence to all clients in the project
+  broadcastUserPresence(projectId);
 }
 
 // Leave a project room
@@ -77,7 +88,56 @@ function leaveProject(clientId, projectId) {
     }
   }
 
-  console.log(`👋 Client ${clientId} (user: ${client.userId || 'unknown'}) left project ${projectId}`);
+  console.log(
+    `👋 Client ${clientId} (user: ${
+      client.userId || "unknown"
+    }) left project ${projectId}`
+  );
+
+  // Broadcast user presence to all remaining clients in the project
+  broadcastUserPresence(projectId);
+}
+
+// Broadcast user presence to all clients in a project
+function broadcastUserPresence(projectId) {
+  if (!projectRooms.has(projectId)) {
+    return;
+  }
+
+  const roomClients = projectRooms.get(projectId);
+  const activeUsers = [];
+
+  roomClients.forEach((clientId) => {
+    const client = clients.get(clientId);
+    if (client && client.userId && client.ws.readyState === 1) {
+      activeUsers.push({
+        userId: client.userId,
+        clientId: clientId,
+        joinedAt: client.lastPing || Date.now(),
+      });
+    }
+  });
+
+  const presenceMessage = {
+    type: "USER_PRESENCE",
+    payload: {
+      projectId,
+      activeUsers,
+      userCount: activeUsers.length,
+    },
+    operationId: `presence-${Date.now()}`,
+    timestamp: Date.now(),
+  };
+
+  console.log(`👥 Broadcasting user presence for project ${projectId}:`, {
+    activeUsers: activeUsers.map((u) => ({
+      userId: u.userId,
+      clientId: u.clientId,
+    })),
+    userCount: activeUsers.length,
+  });
+
+  broadcastToProject(projectId, presenceMessage);
 }
 
 // Broadcast message to all clients in a project
@@ -92,7 +152,10 @@ function broadcastToProject(projectId, message, excludeClientId = null) {
 
   console.log(`📤 BROADCASTING to project ${projectId}:`, {
     type: message.type,
-    payload: message.payload ? JSON.stringify(message.payload).substring(0, 100) + '...' : 'none',
+    payload: message.payload
+      ? JSON.stringify(message.payload).substring(0, 100) + "..."
+      : "none",
+    userId: message.userId,
     targetClients: Array.from(roomClients),
     excludeClientId,
   });
@@ -108,17 +171,23 @@ function broadcastToProject(projectId, message, excludeClientId = null) {
       // WebSocket.OPEN
       try {
         client.ws.send(JSON.stringify(message));
-        console.log(`✅ SENT to client ${clientId} (user: ${client.userId || 'unknown'})`);
+        console.log(
+          `✅ SENT to client ${clientId} (user: ${client.userId || "unknown"})`
+        );
         sentCount++;
       } catch (error) {
         console.error(`❌ Error sending message to client ${clientId}:`, error);
       }
     } else {
-      console.log(`❌ Client ${clientId} not ready (state: ${client?.ws?.readyState})`);
+      console.log(
+        `❌ Client ${clientId} not ready (state: ${client?.ws?.readyState})`
+      );
     }
   });
 
-  console.log(`📊 Broadcast complete: ${sentCount}/${roomClients.size} clients in project ${projectId}`);
+  console.log(
+    `📊 Broadcast complete: ${sentCount}/${roomClients.size} clients in project ${projectId}`
+  );
 }
 
 // Handle WebSocket connections
@@ -153,7 +222,9 @@ wss.on("connection", (ws, request) => {
         type: message.type,
         projectId: message.projectId,
         userId: message.userId || client.userId,
-        payload: message.payload ? JSON.stringify(message.payload).substring(0, 100) + '...' : 'none',
+        payload: message.payload
+          ? JSON.stringify(message.payload).substring(0, 100) + "..."
+          : "none",
         timestamp: new Date().toISOString(),
       });
       handleMessage(clientId, message);
@@ -212,6 +283,11 @@ function handleMessage(clientId, message) {
     case "SET_USER":
       client.userId = message.userId;
       console.log(`Client ${clientId} set user: ${message.userId}`);
+
+      // Broadcast user presence for all projects this client is in
+      client.projectRooms.forEach((projectId) => {
+        broadcastUserPresence(projectId);
+      });
       break;
 
     case "JOIN_PROJECT":
@@ -342,13 +418,17 @@ app.post("/broadcast", (req, res) => {
       type,
       projectId,
       userId,
-      payload: payload ? JSON.stringify(payload).substring(0, 100) + '...' : 'none',
+      payload: payload
+        ? JSON.stringify(payload).substring(0, 100) + "..."
+        : "none",
       operationId,
       timestamp: new Date().toISOString(),
     });
 
     if (!type || !projectId) {
-      console.log(`❌ Missing required fields: type=${type}, projectId=${projectId}`);
+      console.log(
+        `❌ Missing required fields: type=${type}, projectId=${projectId}`
+      );
       return res
         .status(400)
         .json({ error: "Missing required fields: type, projectId" });
@@ -360,7 +440,7 @@ app.post("/broadcast", (req, res) => {
       payload,
       operationId: operationId || `broadcast-${Date.now()}`,
       timestamp: timestamp || Date.now(),
-      userId,
+      userId: userId || null, // Include userId in the message
     };
 
     // Broadcast to all clients in the project

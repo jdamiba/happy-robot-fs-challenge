@@ -69,7 +69,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
 
       try {
-        await websocketClient.broadcastCommentCreate(task.projectId, comment);
+        await websocketClient.broadcastCommentCreate(
+          task.projectId,
+          comment,
+          user.id
+        );
         console.log("Comment creation broadcast successful");
       } catch (broadcastError) {
         console.error("Failed to broadcast comment creation:", broadcastError);

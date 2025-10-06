@@ -244,7 +244,7 @@ export class CommentService {
     }
 
     const commentData = {
-      id: generateId(),
+      id: data.id || generateId(), // Use provided ID or generate new one
       taskId: data.taskId,
       content: data.content,
       authorId: data.authorId,

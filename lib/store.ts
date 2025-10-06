@@ -16,6 +16,11 @@ interface AppState {
   currentProject: ParsedProject | null;
   tasks: ParsedTask[];
   comments: Record<string, Comment[]>; // taskId -> comments
+  activeUsers: Array<{
+    userId: string;
+    clientId: string;
+    joinedAt: number;
+  }>;
   loading: boolean;
   error: string | null;
 
@@ -74,6 +79,15 @@ interface AppState {
   handleCommentUpdate: (update: CommentUpdate) => void;
   handleCommentCreate: (comment: Comment) => void;
   handleCommentDelete: (taskId: string, commentId: string) => void;
+  handleUserPresence: (presence: {
+    projectId: string;
+    activeUsers: Array<{
+      userId: string;
+      clientId: string;
+      joinedAt: number;
+    }>;
+    userCount: number;
+  }) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -84,6 +98,7 @@ export const useAppStore = create<AppState>()(
       currentProject: null,
       tasks: [],
       comments: {},
+      activeUsers: [], // Array of active users in current project
       loading: false,
       error: null,
       wsConnected: false,
@@ -630,6 +645,22 @@ export const useAppStore = create<AppState>()(
               [taskId]: comments.filter((comment) => comment.id !== commentId),
             },
           };
+        });
+      },
+
+      handleUserPresence: (presence) => {
+        console.log("Zustand handleUserPresence called:", presence);
+        set((state) => {
+          // Only update if this is for the current project
+          if (
+            state.currentProject &&
+            presence.projectId === state.currentProject.id
+          ) {
+            return {
+              activeUsers: presence.activeUsers,
+            };
+          }
+          return state;
         });
       },
     }),
