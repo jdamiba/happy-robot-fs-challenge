@@ -98,6 +98,36 @@ function leaveProject(clientId, projectId) {
   broadcastUserPresence(projectId);
 }
 
+// Generate initials from user info
+function generateInitials(userInfo, userId) {
+  if (userInfo) {
+    // Try to use firstName and lastName first
+    if (userInfo.firstName && userInfo.lastName) {
+      return (
+        userInfo.firstName.charAt(0) + userInfo.lastName.charAt(0)
+      ).toUpperCase();
+    }
+    // Fall back to name field
+    if (userInfo.name) {
+      const nameParts = userInfo.name.trim().split(" ");
+      if (nameParts.length >= 2) {
+        return (
+          nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)
+        ).toUpperCase();
+      }
+      return userInfo.name.charAt(0).toUpperCase();
+    }
+    // Fall back to email username
+    if (userInfo.email) {
+      const emailUsername = userInfo.email.split("@")[0];
+      return emailUsername.substring(0, 2).toUpperCase();
+    }
+  }
+
+  // Last resort: use last 2 characters of userId
+  return userId.slice(-2).toUpperCase();
+}
+
 // Broadcast user presence to all clients in a project
 function broadcastUserPresence(projectId) {
   if (!projectRooms.has(projectId)) {
@@ -110,10 +140,8 @@ function broadcastUserPresence(projectId) {
   roomClients.forEach((clientId) => {
     const client = clients.get(clientId);
     if (client && client.userId && client.ws.readyState === 1) {
-      // Generate initials from userId as fallback
-      // For now, we'll use the last 2 characters of the userId
-      // In a real app, you'd fetch user info from database
-      const initials = client.userId.slice(-2).toUpperCase();
+      // Generate initials from user info or userId as fallback
+      const initials = generateInitials(client.userInfo, client.userId);
 
       activeUsers.push({
         userId: client.userId,
@@ -203,6 +231,7 @@ wss.on("connection", (ws, request) => {
   const client = {
     ws,
     userId: null,
+    userInfo: null,
     projectRooms: new Set(),
     lastPing: Date.now(),
   };
@@ -289,7 +318,11 @@ function handleMessage(clientId, message) {
   switch (message.type) {
     case "SET_USER":
       client.userId = message.payload?.userId || message.userId;
-      console.log(`Client ${clientId} set user: ${client.userId}`);
+      client.userInfo = message.payload?.userInfo || null;
+      console.log(
+        `Client ${clientId} set user: ${client.userId}`,
+        client.userInfo
+      );
 
       // Broadcast user presence for all projects this client is in
       client.projectRooms.forEach((projectId) => {

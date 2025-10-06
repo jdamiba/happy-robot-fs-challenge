@@ -13,6 +13,12 @@ interface UseWebSocketOptions {
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
   userId?: string;
+  userInfo?: {
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
@@ -32,6 +38,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
     userId,
+    userInfo,
   } = options;
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -94,7 +101,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             console.log("Setting user ID on WebSocket connection:", userId);
             sendMessage({
               type: "SET_USER",
-              payload: { userId },
+              payload: { userId, userInfo },
               operationId: `set-user-${Date.now()}`,
               timestamp: Date.now(),
             });
@@ -303,11 +310,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   );
 
   const setUser = useCallback(
-    (userId: string) => {
-      console.log("setUser called with:", userId);
+    (userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => {
+      console.log("setUser called with:", userId, userInfo);
       sendMessage({
         type: "SET_USER",
-        payload: { userId },
+        payload: { userId, userInfo },
         operationId: `set-user-${Date.now()}`,
         timestamp: Date.now(),
       });

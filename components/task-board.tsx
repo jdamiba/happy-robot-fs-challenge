@@ -103,6 +103,16 @@ export function TaskBoard() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { joinProject, leaveProject } = useWebSocket({
     userId: currentUser?.id,
+    userInfo: user
+      ? {
+          name:
+            user.fullName ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined,
+          email: user.primaryEmailAddress?.emailAddress || undefined,
+        }
+      : undefined,
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTask, setNewTask] = useState({
