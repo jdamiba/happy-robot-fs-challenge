@@ -62,6 +62,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     console.log("Connecting to WebSocket...", {
       url,
       timestamp: new Date().toISOString(),
+      env: {
+        NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
+        NODE_ENV: process.env.NODE_ENV,
+      },
     });
 
     try {
