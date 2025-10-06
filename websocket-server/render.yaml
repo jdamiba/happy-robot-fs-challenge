@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: happy-robot-websocket
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://your-nextjs-app.onrender.com
+      - key: LOG_LEVEL
+        value: info
+    healthCheckPath: /health

@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Comment {
+  id        String   @id
+  taskId    String
+  content   String
+  authorId  String
+  timestamp DateTime @default(now())
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([authorId], map: "idx_comments_author_id")
+  @@index([taskId], map: "idx_comments_task_id")
+  @@map("comments")
+}
+
+model Project {
+  id          String   @id
+  name        String
+  description String?
+  metadata    Json?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([ownerId], map: "idx_projects_owner_id")
+  @@map("projects")
+}
+
+model Task {
+  id            String     @id
+  projectId     String
+  title         String
+  status        TaskStatus @default(TODO)
+  assignedTo    String[]
+  configuration Json
+  dependencies  String[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+  comments      Comment[]
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignees     User[]     @relation("TaskAssignee")
+
+  @@index([projectId], map: "idx_tasks_project_id")
+  @@index([status], map: "idx_tasks_status")
+  @@map("tasks")
+}
+
+model User {
+  id            String     @id
+  clerkId       String     @unique
+  email         String     @unique
+  firstName     String?
+  lastName      String?
+  imageUrl      String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+  comments      Comment[]
+  projects      Project[]  @relation("ProjectOwner")
+  assignedTasks Task[]     @relation("TaskAssignee")
+
+  @@index([clerkId], map: "idx_users_clerk_id")
+  @@map("users")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  BLOCKED
+}

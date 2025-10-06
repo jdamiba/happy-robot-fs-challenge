@@ -1,0 +1,186 @@
+import { z } from "zod";
+
+// Task Status Enum
+export type TaskStatus =
+  | "TODO"
+  | "IN_PROGRESS"
+  | "IN_REVIEW"
+  | "DONE"
+  | "BLOCKED";
+
+// Configuration types
+export interface TaskConfiguration {
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  description?: string;
+  tags: string[];
+  customFields: Record<string, unknown>;
+}
+
+// Database model types (matching Prisma schema)
+export interface User {
+  id: string;
+  clerkId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  imageUrl?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  projects?: Project[];
+  assignedTasks?: Task[];
+  comments?: Comment[];
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null; // JSON object
+  ownerId: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  owner?: User;
+  tasks?: Task[];
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  status: TaskStatus;
+  assignedTo: string[]; // Array of user IDs
+  configuration: TaskConfiguration | Record<string, unknown> | null; // JSON object
+  dependencies: string[]; // Array of task IDs
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  project?: Project;
+  assignees?: User[];
+  comments?: Comment[];
+}
+
+export interface Comment {
+  id: string;
+  taskId: string;
+  content: string;
+  authorId: string;
+  timestamp: Date | string;
+  task?: Task;
+  author?: User;
+}
+
+// With PostgreSQL, we don't need parsed types since JSON fields are handled natively
+export type ParsedTask = Task;
+export type ParsedProject = Project;
+
+// WebSocket message types
+export interface WebSocketMessage {
+  type:
+    | "TASK_UPDATE"
+    | "TASK_CREATE"
+    | "TASK_DELETE"
+    | "COMMENT_UPDATE"
+    | "COMMENT_CREATE"
+    | "COMMENT_DELETE"
+    | "PROJECT_UPDATE"
+    | "JOIN_PROJECT"
+    | "LEAVE_PROJECT"
+    | "SET_USER"
+    | "ERROR";
+  payload?: unknown;
+  projectId?: string;
+  operationId: string;
+  timestamp: number;
+  userId?: string;
+}
+
+// Real-time update types
+export interface TaskUpdate {
+  id: string;
+  projectId: string;
+  changes: Partial<ParsedTask>;
+  operationId: string;
+  timestamp: number;
+}
+
+export interface CommentUpdate {
+  id: string;
+  taskId: string;
+  changes: Partial<Comment>;
+  operationId: string;
+  timestamp: number;
+}
+
+// API Response types
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  operationId?: string;
+}
+
+// Validation schemas
+export const CreateProjectSchema = z.object({
+  name: z.string().min(1, "Project name is required"),
+  description: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+  ownerId: z.string().min(1, "Owner ID is required"),
+});
+
+export const UpdateProjectSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const CreateTaskSchema = z.object({
+  projectId: z.string(),
+  title: z.string().min(1, "Task title is required"),
+  status: z
+    .enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "BLOCKED"])
+    .default("TODO"),
+  assignedTo: z.array(z.string()).default([]),
+  configuration: z
+    .object({
+      priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
+      description: z.string().optional(),
+      tags: z.array(z.string()).default([]),
+      customFields: z.record(z.unknown()).default({}),
+    })
+    .default({}),
+  dependencies: z.array(z.string()).default([]),
+});
+
+export const UpdateTaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  status: z
+    .enum(["TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "BLOCKED"])
+    .optional(),
+  assignedTo: z.array(z.string()).optional(),
+  configuration: z
+    .object({
+      priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
+      description: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      customFields: z.record(z.unknown()).optional(),
+    })
+    .optional(),
+  dependencies: z.array(z.string()).optional(),
+});
+
+export const CreateCommentSchema = z.object({
+  taskId: z.string(),
+  content: z.string().min(1, "Comment content is required"),
+  authorId: z.string().optional(), // Optional since API route sets it
+});
+
+export const UpdateCommentSchema = z.object({
+  content: z.string().min(1, "Comment content is required"),
+});
+
+// Type exports for validation
+export type CreateProjectInput = z.infer<typeof CreateProjectSchema>;
+export type UpdateProjectInput = z.infer<typeof UpdateProjectSchema>;
+export type CreateTaskInput = z.infer<typeof CreateTaskSchema>;
+export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
+export type CreateCommentInput = z.infer<typeof CreateCommentSchema>;
+export type UpdateCommentInput = z.infer<typeof UpdateCommentSchema>;
