@@ -201,16 +201,32 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     isConnectingRef.current = false;
   }, [setWsConnected]);
 
-  const sendMessage = useCallback((message: WebSocketMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-    } else {
-      console.warn("WebSocket is not connected. Cannot send message:", message);
-    }
-  }, []);
+  const sendMessage = useCallback(
+    (message: WebSocketMessage) => {
+      console.log("sendMessage called:", {
+        message,
+        readyState: wsRef.current?.readyState,
+        isOpen: wsRef.current?.readyState === WebSocket.OPEN,
+        connected: wsConnected,
+      });
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(message));
+        console.log("Message sent successfully:", message);
+      } else {
+        console.warn("WebSocket is not connected. Cannot send message:", {
+          message,
+          readyState: wsRef.current?.readyState,
+          wsConnected,
+        });
+      }
+    },
+    [wsConnected]
+  );
 
   const joinProject = useCallback(
     (projectId: string) => {
+      console.log("joinProject called with:", projectId);
       sendMessage({
         type: "JOIN_PROJECT",
         projectId: projectId,
