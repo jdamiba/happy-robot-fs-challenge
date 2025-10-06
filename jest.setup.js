@@ -107,6 +107,32 @@ global.WebSocket = class WebSocket {
 // Mock fetch
 global.fetch = jest.fn();
 
+// Mock NextResponse
+jest.mock("next/server", () => ({
+  NextRequest: class NextRequest {
+    constructor(url, options = {}) {
+      Object.defineProperty(this, "url", {
+        value: url,
+        writable: false,
+        enumerable: true,
+        configurable: false,
+      });
+      this.method = options.method || "GET";
+      this.headers = new Map(Object.entries(options.headers || {}));
+      this.body = options.body;
+    }
+
+    json = jest.fn().mockResolvedValue({});
+  },
+  NextResponse: {
+    json: jest.fn((data, init) => ({
+      json: () => Promise.resolve(data),
+      status: init?.status || 200,
+      headers: init?.headers || {},
+    })),
+  },
+}));
+
 // Mock console methods to reduce noise in tests
 const originalError = console.error;
 const originalWarn = console.warn;

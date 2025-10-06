@@ -28,6 +28,13 @@ jest.mock("@/lib/db", () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      user: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
     },
   };
 });
@@ -196,16 +203,18 @@ describe("Database Services", () => {
       const mockTask = {
         id: "task_1",
         title: "Test Task",
-        description: "Test Description",
         status: "TODO",
-        priority: "MEDIUM",
         projectId: "project_1",
-        authorId: "user_123",
+        assignedTo: [],
         createdAt: new Date(),
         updatedAt: new Date(),
         dependencies: [],
-        tags: [],
-        configuration: {},
+        configuration: {
+          priority: "MEDIUM",
+          tags: [],
+          customFields: {},
+          description: "Test Description",
+        },
         project: {} as any,
         comments: [],
       };
@@ -214,11 +223,16 @@ describe("Database Services", () => {
 
       const result = await TaskService.create({
         title: "Test Task",
-        description: "Test Description",
         status: "TODO",
-        priority: "MEDIUM",
         projectId: "project_1",
-        authorId: "user_123",
+        assignedTo: [],
+        configuration: {
+          priority: "MEDIUM",
+          tags: [],
+          customFields: {},
+          description: "Test Description",
+        },
+        dependencies: [],
       });
 
       expect(result).toEqual(mockTask);
@@ -243,16 +257,18 @@ describe("Database Services", () => {
         {
           id: "task_1",
           title: "Task 1",
-          description: "Description 1",
           status: "TODO",
-          priority: "MEDIUM",
           projectId: "project_1",
-          authorId: "user_123",
+          assignedTo: [],
           createdAt: new Date(),
           updatedAt: new Date(),
           dependencies: [],
-          tags: [],
-          configuration: {},
+          configuration: {
+            priority: "MEDIUM",
+            tags: [],
+            customFields: {},
+            description: "Description 1",
+          },
           project: {} as any,
           comments: [],
         },
@@ -277,16 +293,18 @@ describe("Database Services", () => {
       const mockTask = {
         id: "task_1",
         title: "Test Task",
-        description: "Test Description",
         status: "IN_PROGRESS",
-        priority: "MEDIUM",
         projectId: "project_1",
-        authorId: "user_123",
+        assignedTo: [],
         createdAt: new Date(),
         updatedAt: new Date(),
         dependencies: [],
-        tags: [],
-        configuration: {},
+        configuration: {
+          priority: "MEDIUM",
+          tags: [],
+          customFields: {},
+          description: "Test Description",
+        },
         project: {} as any,
         comments: [],
       };
@@ -310,16 +328,18 @@ describe("Database Services", () => {
       const mockTask = {
         id: "task_1",
         title: "Test Task",
-        description: "Test Description",
         status: "TODO",
-        priority: "MEDIUM",
         projectId: "project_1",
-        authorId: "user_123",
+        assignedTo: [],
         createdAt: new Date(),
         updatedAt: new Date(),
         dependencies: ["task_2"],
-        tags: [],
-        configuration: {},
+        configuration: {
+          priority: "MEDIUM",
+          tags: [],
+          customFields: {},
+          description: "Test Description",
+        },
         project: {} as any,
         comments: [],
       };
@@ -357,6 +377,14 @@ describe("Database Services", () => {
         author: {} as any,
       };
 
+      // Mock user exists to avoid foreign key constraint violation
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: "user_123",
+        email: "test@example.com",
+        firstName: "Test",
+        lastName: "User",
+      });
+
       mockPrisma.comment.create.mockResolvedValue(mockComment);
 
       const result = await CommentService.create({
@@ -368,9 +396,11 @@ describe("Database Services", () => {
       expect(result).toEqual(mockComment);
       expect(mockPrisma.comment.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          id: expect.any(String),
           taskId: "task_1",
           content: "Test comment",
           authorId: "user_123",
+          timestamp: expect.any(Date),
         }),
         include: {
           task: true,

@@ -49,6 +49,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     | ((userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => void)
     | null
   >(null);
+  const userSetRef = useRef<boolean>(false);
 
   const {
     wsConnected,
@@ -167,27 +168,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
             case "CONNECTION_ESTABLISHED":
               console.log("🔗 WebSocket connection established on server side");
-              // Optionally set user ID here if we have one
-              if (userId && setUserRef.current) {
-                console.log(
-                  "🔧 Setting user ID after connection established:",
-                  {
-                    userId,
-                    userInfo,
-                    hasUserInfo: !!userInfo,
-                    userInfoContent: userInfo
-                      ? {
-                          name: userInfo.name,
-                          firstName: userInfo.firstName,
-                          lastName: userInfo.lastName,
-                          email: userInfo.email,
-                        }
-                      : null,
-                    timestamp: new Date().toISOString(),
-                  }
-                );
-                setUserRef.current(userId, userInfo);
-              }
+              // Note: SET_USER will be sent by the useEffect when userId/userInfo are available
               break;
 
             case "ERROR":
@@ -211,6 +192,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           readyState: wsRef.current?.readyState,
           timestamp: new Date().toISOString(),
         });
+
+        // Reset user set flag when connection is lost
+        userSetRef.current = false;
         setWsConnected(false);
         isConnectingRef.current = false;
 
@@ -270,6 +254,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       wsRef.current = null;
     }
 
+    // Reset user set flag when disconnecting
+    userSetRef.current = false;
     setWsConnected(false);
     isConnectingRef.current = false;
   }, [setWsConnected]);
@@ -327,6 +313,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const setUser = useCallback(
     (userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => {
+      // Only send SET_USER once per session
+      if (userSetRef.current) {
+        console.log("🔧 setUser called but already set, skipping:", {
+          userId,
+          userInfo,
+          hasUserInfo: !!userInfo,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
       console.log("🔧 setUser called with:", {
         userId,
         userInfo,
@@ -334,6 +331,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         userInfoKeys: userInfo ? Object.keys(userInfo) : [],
         timestamp: new Date().toISOString(),
       });
+
+      userSetRef.current = true;
       sendMessage({
         type: "SET_USER",
         payload: { userId, userInfo },
@@ -348,8 +347,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   setUserRef.current = setUser;
 
   // Call setUser when userId changes after WebSocket is connected
+  // Only send SET_USER once per session to avoid spam
   useEffect(() => {
-    if (wsConnected && userId) {
+    if (wsConnected && userId && !userSetRef.current) {
       console.log("🔄 userId/userInfo changed, calling setUser:", {
         wsConnected,
         userId,

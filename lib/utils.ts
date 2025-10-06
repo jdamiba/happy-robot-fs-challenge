@@ -32,11 +32,35 @@ export function parseProject(project: any): ParsedProject {
 // Type conversion functions for Prisma operations
 export function stringifyTaskData(data: Partial<ParsedTask>): any {
   const { project, assignees, comments, ...taskData } = data;
+
+  // Ensure required fields are present
+  if (!taskData.id) {
+    taskData.id = generateId();
+  }
+  if (!taskData.createdAt) {
+    taskData.createdAt = new Date();
+  }
+  if (!taskData.updatedAt) {
+    taskData.updatedAt = new Date();
+  }
+
   return taskData;
 }
 
 export function stringifyProjectData(data: Partial<ParsedProject>): any {
   const { owner, tasks, ...projectData } = data;
+
+  // Ensure required fields are present
+  if (!projectData.id) {
+    projectData.id = generateId();
+  }
+  if (!projectData.createdAt) {
+    projectData.createdAt = new Date();
+  }
+  if (!projectData.updatedAt) {
+    projectData.updatedAt = new Date();
+  }
+
   return projectData;
 }
 

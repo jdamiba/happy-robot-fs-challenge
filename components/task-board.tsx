@@ -93,6 +93,8 @@ export function TaskBoard() {
   const {
     currentProject,
     tasks,
+    loading,
+    error,
     setTasks,
     setCurrentProject,
     setLoading,
@@ -325,6 +327,22 @@ export function TaskBoard() {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Select a project to view tasks</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-red-500">{error}</p>
       </div>
     );
   }
