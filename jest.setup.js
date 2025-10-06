@@ -5,10 +5,15 @@ import { TextEncoder, TextDecoder } from "util";
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 
-// Mock Request and Response APIs
+// Mock Request and Response APIs (simplified to avoid conflicts with NextRequest)
 global.Request = class Request {
   constructor(url, options = {}) {
-    this.url = url;
+    Object.defineProperty(this, "url", {
+      value: url,
+      writable: false,
+      enumerable: true,
+      configurable: false,
+    });
     this.method = options.method || "GET";
     this.headers = new Map(Object.entries(options.headers || {}));
     this.body = options.body;
@@ -74,6 +79,13 @@ global.WebSocket = class WebSocket {
   constructor(url) {
     this.url = url;
     this.readyState = WebSocket.CONNECTING;
+
+    // Mock event handlers
+    this.onopen = null;
+    this.onclose = null;
+    this.onmessage = null;
+    this.onerror = null;
+
     setTimeout(() => {
       this.readyState = WebSocket.OPEN;
       if (this.onopen) this.onopen();
@@ -81,7 +93,10 @@ global.WebSocket = class WebSocket {
   }
 
   send = jest.fn();
-  close = jest.fn();
+  close = jest.fn(() => {
+    this.readyState = WebSocket.CLOSED;
+    if (this.onclose) this.onclose({ code: 1000, reason: "Normal closure" });
+  });
 
   static CONNECTING = 0;
   static OPEN = 1;

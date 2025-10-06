@@ -100,32 +100,56 @@ function leaveProject(clientId, projectId) {
 
 // Generate initials from user info
 function generateInitials(userInfo, userId) {
+  console.log(`🎯 generateInitials called:`, {
+    userInfo,
+    userId,
+    hasUserInfo: !!userInfo,
+    userInfoKeys: userInfo ? Object.keys(userInfo) : [],
+    timestamp: new Date().toISOString(),
+  });
+
   if (userInfo) {
     // Try to use firstName and lastName first
     if (userInfo.firstName && userInfo.lastName) {
-      return (
+      const initials = (
         userInfo.firstName.charAt(0) + userInfo.lastName.charAt(0)
       ).toUpperCase();
+      console.log(
+        `✅ Using firstName + lastName: "${userInfo.firstName}" + "${userInfo.lastName}" = "${initials}"`
+      );
+      return initials;
     }
     // Fall back to name field
     if (userInfo.name) {
       const nameParts = userInfo.name.trim().split(" ");
       if (nameParts.length >= 2) {
-        return (
+        const initials = (
           nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)
         ).toUpperCase();
+        console.log(`✅ Using name parts: "${userInfo.name}" -> "${initials}"`);
+        return initials;
       }
-      return userInfo.name.charAt(0).toUpperCase();
+      const initials = userInfo.name.charAt(0).toUpperCase();
+      console.log(`✅ Using single name: "${userInfo.name}" -> "${initials}"`);
+      return initials;
     }
     // Fall back to email username
     if (userInfo.email) {
       const emailUsername = userInfo.email.split("@")[0];
-      return emailUsername.substring(0, 2).toUpperCase();
+      const initials = emailUsername.substring(0, 2).toUpperCase();
+      console.log(
+        `✅ Using email username: "${userInfo.email}" -> "${initials}"`
+      );
+      return initials;
     }
   }
 
   // Last resort: use last 2 characters of userId
-  return userId.slice(-2).toUpperCase();
+  const fallbackInitials = userId.slice(-2).toUpperCase();
+  console.log(
+    `⚠️  Using fallback (userId): "${userId}" -> "${fallbackInitials}"`
+  );
+  return fallbackInitials;
 }
 
 // Broadcast user presence to all clients in a project
@@ -142,6 +166,14 @@ function broadcastUserPresence(projectId) {
     if (client && client.userId && client.ws.readyState === 1) {
       // Generate initials from user info or userId as fallback
       const initials = generateInitials(client.userInfo, client.userId);
+
+      console.log(`👤 Adding user to activeUsers:`, {
+        clientId,
+        userId: client.userId,
+        userInfo: client.userInfo,
+        generatedInitials: initials,
+        timestamp: new Date().toISOString(),
+      });
 
       activeUsers.push({
         userId: client.userId,
@@ -319,10 +351,21 @@ function handleMessage(clientId, message) {
     case "SET_USER":
       client.userId = message.payload?.userId || message.userId;
       client.userInfo = message.payload?.userInfo || null;
-      console.log(
-        `Client ${clientId} set user: ${client.userId}`,
-        client.userInfo
-      );
+      console.log(`🔧 SET_USER received from client ${clientId}:`, {
+        userId: client.userId,
+        userInfo: client.userInfo,
+        hasUserInfo: !!client.userInfo,
+        userInfoKeys: client.userInfo ? Object.keys(client.userInfo) : [],
+        userInfoContent: client.userInfo
+          ? {
+              name: client.userInfo.name,
+              firstName: client.userInfo.firstName,
+              lastName: client.userInfo.lastName,
+              email: client.userInfo.email,
+            }
+          : null,
+        timestamp: new Date().toISOString(),
+      });
 
       // Broadcast user presence for all projects this client is in
       client.projectRooms.forEach((projectId) => {

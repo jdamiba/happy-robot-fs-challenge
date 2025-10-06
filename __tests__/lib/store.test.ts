@@ -24,7 +24,11 @@ describe("useAppStore", () => {
       useAppStore.getState().setTasks([]);
       useAppStore.getState().setCurrentProject(null);
       useAppStore.getState().setComments({});
-      useAppStore.getState().setActiveUsers([]);
+      useAppStore.getState().handleUserPresence({
+        projectId: "test-project",
+        activeUsers: [],
+        userCount: 0,
+      });
     });
   });
 

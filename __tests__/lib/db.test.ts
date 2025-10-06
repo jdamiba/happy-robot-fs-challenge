@@ -1,57 +1,36 @@
 import { ProjectService, TaskService, CommentService } from "@/lib/db";
 import { prisma } from "@/lib/db";
 
-// Mock Prisma
-jest.mock("@/lib/db", () => ({
-  prisma: {
-    project: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+// Mock Prisma client only
+jest.mock("@/lib/db", () => {
+  const originalModule = jest.requireActual("@/lib/db");
+  return {
+    ...originalModule,
+    prisma: {
+      project: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      task: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      comment: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
     },
-    task: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    comment: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-  },
-  ProjectService: {
-    create: jest.fn(),
-    findById: jest.fn(),
-    findAll: jest.fn(),
-    findByOwnerId: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
-  TaskService: {
-    create: jest.fn(),
-    findById: jest.fn(),
-    findByProjectId: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    updateStatus: jest.fn(),
-    addDependency: jest.fn(),
-    removeDependency: jest.fn(),
-  },
-  CommentService: {
-    create: jest.fn(),
-    findById: jest.fn(),
-    findByTaskId: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-  },
-}));
+  };
+});
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 

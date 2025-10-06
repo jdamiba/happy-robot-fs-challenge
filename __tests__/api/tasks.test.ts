@@ -3,24 +3,28 @@ import { GET, POST } from "@/app/api/projects/[id]/tasks/route";
 import { PUT, DELETE } from "@/app/api/tasks/[id]/route";
 import { prisma } from "@/lib/db";
 
-// Mock Prisma
-jest.mock("@/lib/db", () => ({
-  prisma: {
-    task: {
-      findMany: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+// Mock Prisma client only
+jest.mock("@/lib/db", () => {
+  const originalModule = jest.requireActual("@/lib/db");
+  return {
+    ...originalModule,
+    prisma: {
+      task: {
+        findMany: jest.fn(),
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      project: {
+        findUnique: jest.fn(),
+      },
+      user: {
+        findUnique: jest.fn(),
+      },
     },
-    project: {
-      findUnique: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
-}));
+  };
+});
 
 // Mock auth utils
 jest.mock("@/lib/auth-utils", () => ({

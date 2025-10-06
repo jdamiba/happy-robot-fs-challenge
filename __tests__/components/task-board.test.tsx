@@ -114,6 +114,8 @@ describe("TaskBoard", () => {
         dependencies: [],
         tags: [],
         configuration: {},
+        assignedTo: [],
+        comments: [],
       },
     ],
     activeUsers: [

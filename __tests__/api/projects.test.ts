@@ -2,21 +2,25 @@ import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/projects/route";
 import { prisma } from "@/lib/db";
 
-// Mock Prisma
-jest.mock("@/lib/db", () => ({
-  prisma: {
-    project: {
-      findMany: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+// Mock Prisma client only
+jest.mock("@/lib/db", () => {
+  const originalModule = jest.requireActual("@/lib/db");
+  return {
+    ...originalModule,
+    prisma: {
+      project: {
+        findMany: jest.fn(),
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn(),
+      },
+      user: {
+        findUnique: jest.fn(),
+      },
     },
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
-}));
+  };
+});
 
 // Mock auth utils
 jest.mock("@/lib/auth-utils", () => ({

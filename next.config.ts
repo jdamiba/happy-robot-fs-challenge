@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: false,
   },
+  outputFileTracingRoot: __dirname,
 };
 
 export default nextConfig;

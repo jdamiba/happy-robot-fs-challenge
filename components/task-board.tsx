@@ -101,18 +101,39 @@ export function TaskBoard() {
   } = useAppStore();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Log user info being passed to WebSocket
+  const userInfoForWebSocket = user
+    ? {
+        name:
+          user.fullName ||
+          `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        email: user.primaryEmailAddress?.emailAddress || undefined,
+      }
+    : undefined;
+
+  console.log("🔍 TaskBoard - User info for WebSocket:", {
+    user,
+    currentUser,
+    userInfoForWebSocket,
+    hasUser: !!user,
+    hasCurrentUser: !!currentUser,
+    clerkUserData: user
+      ? {
+          fullName: user.fullName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.primaryEmailAddress?.emailAddress,
+        }
+      : null,
+    timestamp: new Date().toISOString(),
+  });
+
   const { joinProject, leaveProject } = useWebSocket({
     userId: currentUser?.id,
-    userInfo: user
-      ? {
-          name:
-            user.fullName ||
-            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-          firstName: user.firstName || undefined,
-          lastName: user.lastName || undefined,
-          email: user.primaryEmailAddress?.emailAddress || undefined,
-        }
-      : undefined,
+    userInfo: userInfoForWebSocket,
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTask, setNewTask] = useState({
