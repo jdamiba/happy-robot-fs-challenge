@@ -20,6 +20,7 @@ interface AppState {
     userId: string;
     clientId: string;
     joinedAt: number;
+    initials?: string;
   }>;
   loading: boolean;
   error: string | null;
@@ -85,6 +86,7 @@ interface AppState {
       userId: string;
       clientId: string;
       joinedAt: number;
+      initials?: string;
     }>;
     userCount: number;
   }) => void;

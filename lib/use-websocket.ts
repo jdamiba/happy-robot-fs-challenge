@@ -146,6 +146,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                   userId: string;
                   clientId: string;
                   joinedAt: number;
+                  initials?: string;
                 }>;
                 userCount: number;
               };

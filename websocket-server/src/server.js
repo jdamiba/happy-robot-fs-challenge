@@ -110,10 +110,16 @@ function broadcastUserPresence(projectId) {
   roomClients.forEach((clientId) => {
     const client = clients.get(clientId);
     if (client && client.userId && client.ws.readyState === 1) {
+      // Generate initials from userId as fallback
+      // For now, we'll use the last 2 characters of the userId
+      // In a real app, you'd fetch user info from database
+      const initials = client.userId.slice(-2).toUpperCase();
+
       activeUsers.push({
         userId: client.userId,
         clientId: clientId,
         joinedAt: client.lastPing || Date.now(),
+        initials: initials, // Add initials to the payload
       });
     }
   });
@@ -133,6 +139,7 @@ function broadcastUserPresence(projectId) {
     activeUsers: activeUsers.map((u) => ({
       userId: u.userId,
       clientId: u.clientId,
+      initials: u.initials,
     })),
     userCount: activeUsers.length,
   });

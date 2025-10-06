@@ -39,6 +39,7 @@ function ActiveUserBadge({
     userId: string;
     clientId: string;
     joinedAt: number;
+    initials?: string;
   };
 }) {
   // Generate a consistent color based on user ID
@@ -58,8 +59,8 @@ function ActiveUserBadge({
     colors.length;
   const colorClass = colors[colorIndex];
 
-  // Generate initials from user ID (fallback since we don't have names)
-  const initials = user.userId.slice(-2).toUpperCase();
+  // Use initials from server if available, otherwise generate from userId
+  const initials = user.initials || user.userId.slice(-2).toUpperCase();
 
   return (
     <div
