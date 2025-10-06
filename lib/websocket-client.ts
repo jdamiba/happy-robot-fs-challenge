@@ -19,6 +19,11 @@ class WebSocketClientService {
     // Use environment variable for external WebSocket server URL
     this.serverUrl =
       process.env.WEBSOCKET_SERVER_URL || "http://localhost:3001";
+
+    console.log(
+      "WebSocketClientService initialized with serverUrl:",
+      this.serverUrl
+    );
   }
 
   /**
@@ -26,8 +31,15 @@ class WebSocketClientService {
    * The server will broadcast it to all connected clients in the project
    */
   private async sendMessage(message: WebSocketMessage): Promise<void> {
+    const url = `${this.serverUrl}/broadcast`;
+    console.log("Sending WebSocket message:", {
+      url,
+      message,
+      serverUrl: this.serverUrl,
+    });
+
     try {
-      const response = await fetch(`${this.serverUrl}/broadcast`, {
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -35,8 +47,16 @@ class WebSocketClientService {
         body: JSON.stringify(message),
       });
 
+      console.log("WebSocket message response:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+      });
+
       if (!response.ok) {
         console.error("Failed to send WebSocket message:", response.statusText);
+      } else {
+        console.log("WebSocket message sent successfully");
       }
     } catch (error) {
       console.error("Error sending WebSocket message:", error);

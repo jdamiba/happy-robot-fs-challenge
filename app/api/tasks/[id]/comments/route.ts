@@ -62,7 +62,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const task = await TaskService.findById(id);
     if (task) {
       // Broadcast comment creation to WebSocket clients
-      await websocketClient.broadcastCommentCreate(task.projectId, comment);
+      console.log("Broadcasting comment creation:", {
+        commentId: comment.id,
+        taskId: task.id,
+        projectId: task.projectId,
+      });
+
+      try {
+        await websocketClient.broadcastCommentCreate(task.projectId, comment);
+        console.log("Comment creation broadcast successful");
+      } catch (broadcastError) {
+        console.error("Failed to broadcast comment creation:", broadcastError);
+      }
     }
 
     return NextResponse.json({

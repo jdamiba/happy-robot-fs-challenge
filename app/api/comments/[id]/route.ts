@@ -53,13 +53,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const task = await TaskService.findById(comment.taskId);
     if (task) {
       // Broadcast comment update to WebSocket clients
-      await websocketClient.broadcastCommentUpdate(task.projectId, {
-        id: comment.id,
+      console.log("Broadcasting comment update:", {
+        commentId: comment.id,
         taskId: comment.taskId,
+        projectId: task.projectId,
         changes: validatedData,
-        operationId: generateOperationId(),
-        timestamp: Date.now(),
       });
+
+      try {
+        await websocketClient.broadcastCommentUpdate(task.projectId, {
+          id: comment.id,
+          taskId: comment.taskId,
+          changes: validatedData,
+          operationId: generateOperationId(),
+          timestamp: Date.now(),
+        });
+        console.log("Comment update broadcast successful");
+      } catch (broadcastError) {
+        console.error("Failed to broadcast comment update:", broadcastError);
+      }
     }
 
     return NextResponse.json({
@@ -111,7 +123,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const task = await TaskService.findById(comment.taskId);
     if (task) {
       // Broadcast comment deletion to WebSocket clients
-      await websocketClient.broadcastCommentDelete(task.projectId, comment.id);
+      console.log("Broadcasting comment deletion:", {
+        commentId: comment.id,
+        taskId: comment.taskId,
+        projectId: task.projectId,
+      });
+
+      try {
+        await websocketClient.broadcastCommentDelete(
+          task.projectId,
+          comment.id
+        );
+        console.log("Comment deletion broadcast successful");
+      } catch (broadcastError) {
+        console.error("Failed to broadcast comment deletion:", broadcastError);
+      }
     }
 
     return NextResponse.json({

@@ -1103,7 +1103,12 @@ function CommentsSection({
     handleCommentCreate,
     handleCommentUpdate,
     handleCommentDelete,
+    comments: storeComments,
+    setComments,
   } = useAppStore();
+
+  // Use comments from the store for real-time updates, fallback to prop
+  const currentComments = storeComments[task.id] || comments;
   const [newComment, setNewComment] = useState("");
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -1139,7 +1144,10 @@ function CommentsSection({
     try {
       const response = await apiClient.getComments(task.id);
       if (response.success && response.data) {
-        // Update the task with loaded comments
+        // Store comments in Zustand store for real-time updates
+        setComments(task.id, response.data);
+
+        // Also update the task prop for backward compatibility
         const updatedTask = { ...task, comments: response.data };
         onCommentAdd(updatedTask);
       }
@@ -1163,7 +1171,7 @@ function CommentsSection({
       if (response.success && response.data) {
         const updatedTask = {
           ...task,
-          comments: [response.data, ...(task.comments || [])],
+          comments: [response.data, ...currentComments],
         };
         onCommentAdd(updatedTask);
         setNewComment("");
@@ -1186,7 +1194,7 @@ function CommentsSection({
       });
 
       if (response.success && response.data) {
-        const updatedComments = (task.comments || []).map((comment) =>
+        const updatedComments = currentComments.map((comment) =>
           comment.id === commentId ? response.data! : comment
         );
         const updatedTask = { ...task, comments: updatedComments };
@@ -1211,7 +1219,7 @@ function CommentsSection({
       const response = await apiClient.deleteComment(commentId);
 
       if (response.success) {
-        const updatedComments = (task.comments || []).filter(
+        const updatedComments = currentComments.filter(
           (comment) => comment.id !== commentId
         );
         const updatedTask = { ...task, comments: updatedComments };
@@ -1237,7 +1245,7 @@ function CommentsSection({
   return (
     <div>
       <label className="block text-sm font-medium mb-2">
-        Comments ({comments.length})
+        Comments ({currentComments.length})
       </label>
 
       {/* Add Comment Form */}
@@ -1265,10 +1273,10 @@ function CommentsSection({
 
       {/* Comments List */}
       <div className="space-y-3">
-        {comments.length === 0 ? (
+        {currentComments.length === 0 ? (
           <p className="text-sm text-muted-foreground">No comments yet.</p>
         ) : (
-          comments.map((comment) => (
+          currentComments.map((comment) => (
             <div key={comment.id} className="border rounded-lg p-3 bg-gray-50">
               <div className="flex items-start justify-between">
                 <div className="flex-1">

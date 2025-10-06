@@ -39,25 +39,30 @@ function generateClientId() {
 
 // Join a project room
 function joinProject(clientId, projectId) {
-  if (!clients.has(clientId)) return;
+  if (!clients.has(clientId)) {
+    console.log(`❌ Cannot join project: client ${clientId} not found`);
+    return;
+  }
 
   const client = clients.get(clientId);
   client.projectRooms.add(projectId);
 
   if (!projectRooms.has(projectId)) {
     projectRooms.set(projectId, new Set());
+    console.log(`🆕 Created new project room: ${projectId}`);
   }
   projectRooms.get(projectId).add(clientId);
 
-  console.log(`Client ${clientId} joined project ${projectId}`);
-  console.log(
-    `Project ${projectId} now has ${projectRooms.get(projectId).size} clients`
-  );
+  console.log(`✅ Client ${clientId} (user: ${client.userId || 'unknown'}) joined project ${projectId}`);
+  console.log(`📊 Project ${projectId} now has ${projectRooms.get(projectId).size} clients`);
 }
 
 // Leave a project room
 function leaveProject(clientId, projectId) {
-  if (!clients.has(clientId)) return;
+  if (!clients.has(clientId)) {
+    console.log(`❌ Cannot leave project: client ${clientId} not found`);
+    return;
+  }
 
   const client = clients.get(clientId);
   client.projectRooms.delete(projectId);
@@ -68,35 +73,52 @@ function leaveProject(clientId, projectId) {
     // Clean up empty project rooms
     if (projectRooms.get(projectId).size === 0) {
       projectRooms.delete(projectId);
+      console.log(`🗑️  Deleted empty project room: ${projectId}`);
     }
   }
 
-  console.log(`Client ${clientId} left project ${projectId}`);
+  console.log(`👋 Client ${clientId} (user: ${client.userId || 'unknown'}) left project ${projectId}`);
 }
 
 // Broadcast message to all clients in a project
 function broadcastToProject(projectId, message, excludeClientId = null) {
-  if (!projectRooms.has(projectId)) return;
+  if (!projectRooms.has(projectId)) {
+    console.log(`❌ No clients in project room ${projectId}`);
+    return;
+  }
 
   const roomClients = projectRooms.get(projectId);
   let sentCount = 0;
 
+  console.log(`📤 BROADCASTING to project ${projectId}:`, {
+    type: message.type,
+    payload: message.payload ? JSON.stringify(message.payload).substring(0, 100) + '...' : 'none',
+    targetClients: Array.from(roomClients),
+    excludeClientId,
+  });
+
   roomClients.forEach((clientId) => {
-    if (excludeClientId && clientId === excludeClientId) return;
+    if (excludeClientId && clientId === excludeClientId) {
+      console.log(`⏭️  Skipping excluded client ${clientId}`);
+      return;
+    }
 
     const client = clients.get(clientId);
     if (client && client.ws.readyState === 1) {
       // WebSocket.OPEN
       try {
         client.ws.send(JSON.stringify(message));
+        console.log(`✅ SENT to client ${clientId} (user: ${client.userId || 'unknown'})`);
         sentCount++;
       } catch (error) {
-        console.error(`Error sending message to client ${clientId}:`, error);
+        console.error(`❌ Error sending message to client ${clientId}:`, error);
       }
+    } else {
+      console.log(`❌ Client ${clientId} not ready (state: ${client?.ws?.readyState})`);
     }
   });
 
-  console.log(`Broadcasted to ${sentCount} clients in project ${projectId}`);
+  console.log(`📊 Broadcast complete: ${sentCount}/${roomClients.size} clients in project ${projectId}`);
 }
 
 // Handle WebSocket connections
@@ -127,6 +149,13 @@ wss.on("connection", (ws, request) => {
   ws.on("message", (data) => {
     try {
       const message = JSON.parse(data.toString());
+      console.log(`📨 RECEIVED from client ${clientId}:`, {
+        type: message.type,
+        projectId: message.projectId,
+        userId: message.userId || client.userId,
+        payload: message.payload ? JSON.stringify(message.payload).substring(0, 100) + '...' : 'none',
+        timestamp: new Date().toISOString(),
+      });
       handleMessage(clientId, message);
     } catch (error) {
       console.error(`Error parsing message from ${clientId}:`, error);
@@ -177,7 +206,7 @@ function handleMessage(clientId, message) {
   const client = clients.get(clientId);
   if (!client) return;
 
-  console.log(`Message from ${clientId}:`, message.type);
+  console.log(`🔄 PROCESSING message from ${clientId}:`, message.type);
 
   switch (message.type) {
     case "SET_USER":
@@ -309,7 +338,17 @@ app.post("/broadcast", (req, res) => {
     const { type, payload, projectId, operationId, timestamp, userId } =
       req.body;
 
+    console.log(`🌐 HTTP BROADCAST received:`, {
+      type,
+      projectId,
+      userId,
+      payload: payload ? JSON.stringify(payload).substring(0, 100) + '...' : 'none',
+      operationId,
+      timestamp: new Date().toISOString(),
+    });
+
     if (!type || !projectId) {
+      console.log(`❌ Missing required fields: type=${type}, projectId=${projectId}`);
       return res
         .status(400)
         .json({ error: "Missing required fields: type, projectId" });

@@ -103,12 +103,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
               handleTaskDelete(deletePayload.taskId);
               break;
             case "COMMENT_UPDATE":
+              console.log("Received COMMENT_UPDATE:", message.payload);
               handleCommentUpdate(message.payload as CommentUpdate);
               break;
             case "COMMENT_CREATE":
+              console.log("Received COMMENT_CREATE:", message.payload);
               handleCommentCreate(message.payload as Comment);
               break;
             case "COMMENT_DELETE":
+              console.log("Received COMMENT_DELETE:", message.payload);
               const commentDeletePayload = message.payload as {
                 taskId: string;
                 id: string;

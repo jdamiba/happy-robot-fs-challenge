@@ -50,13 +50,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const task = await TaskService.update(id, validatedData);
 
     // Broadcast task update to WebSocket clients
-    await websocketClient.broadcastTaskUpdate(task.projectId, {
-      id: task.id,
+    console.log("Broadcasting task update:", {
+      taskId: task.id,
       projectId: task.projectId,
       changes: validatedData,
-      operationId: generateOperationId(),
-      timestamp: Date.now(),
     });
+
+    try {
+      await websocketClient.broadcastTaskUpdate(task.projectId, {
+        id: task.id,
+        projectId: task.projectId,
+        changes: validatedData,
+        operationId: generateOperationId(),
+        timestamp: Date.now(),
+      });
+      console.log("Task update broadcast successful");
+    } catch (broadcastError) {
+      console.error("Failed to broadcast task update:", broadcastError);
+    }
 
     return NextResponse.json({
       success: true,

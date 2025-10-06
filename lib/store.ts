@@ -577,12 +577,16 @@ export const useAppStore = create<AppState>()(
       },
 
       handleCommentUpdate: (update) => {
+        console.log("Zustand handleCommentUpdate called:", update);
         set((state) => {
           const taskId = update.taskId;
           const comments = state.comments[taskId] || [];
           const commentIndex = comments.findIndex((c) => c.id === update.id);
 
-          if (commentIndex === -1) return state;
+          if (commentIndex === -1) {
+            console.log("Comment not found for update:", update.id);
+            return state;
+          }
 
           const updatedComment = {
             ...comments[commentIndex],
@@ -601,6 +605,7 @@ export const useAppStore = create<AppState>()(
       },
 
       handleCommentCreate: (comment) => {
+        console.log("Zustand handleCommentCreate called:", comment);
         set((state) => {
           const existingComments = state.comments[comment.taskId] || [];
           return {
@@ -613,6 +618,10 @@ export const useAppStore = create<AppState>()(
       },
 
       handleCommentDelete: (taskId, commentId) => {
+        console.log("Zustand handleCommentDelete called:", {
+          taskId,
+          commentId,
+        });
         set((state) => {
           const comments = state.comments[taskId] || [];
           return {
