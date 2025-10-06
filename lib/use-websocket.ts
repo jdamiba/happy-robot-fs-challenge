@@ -283,34 +283,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [wsConnected]
   );
 
-  const joinProject = useCallback(
-    (projectId: string, userId?: string) => {
-      console.log("joinProject called with:", projectId, "userId:", userId);
-      sendMessage({
-        type: "JOIN_PROJECT",
-        projectId: projectId,
-        userId: userId,
-        operationId: `join-${Date.now()}`,
-        timestamp: Date.now(),
-      });
-    },
-    [sendMessage]
-  );
-
-  const leaveProject = useCallback(
-    (projectId: string, userId?: string) => {
-      console.log("leaveProject called with:", projectId, "userId:", userId);
-      sendMessage({
-        type: "LEAVE_PROJECT",
-        projectId: projectId,
-        userId: userId,
-        operationId: `leave-${Date.now()}`,
-        timestamp: Date.now(),
-      });
-    },
-    [sendMessage]
-  );
-
   const setUser = useCallback(
     (userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => {
       // Only send SET_USER once per session
@@ -337,6 +309,41 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         type: "SET_USER",
         payload: { userId, userInfo },
         operationId: `set-user-${Date.now()}`,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage]
+  );
+
+  const joinProject = useCallback(
+    (projectId: string, userId?: string) => {
+      console.log("joinProject called with:", projectId, "userId:", userId);
+
+      // Ensure user is set before joining project
+      if (userId && !userSetRef.current) {
+        console.log("Setting user before joining project:", userId);
+        setUser(userId, userInfo);
+      }
+
+      sendMessage({
+        type: "JOIN_PROJECT",
+        projectId: projectId,
+        userId: userId,
+        operationId: `join-${Date.now()}`,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage, setUser, userInfo]
+  );
+
+  const leaveProject = useCallback(
+    (projectId: string, userId?: string) => {
+      console.log("leaveProject called with:", projectId, "userId:", userId);
+      sendMessage({
+        type: "LEAVE_PROJECT",
+        projectId: projectId,
+        userId: userId,
+        operationId: `leave-${Date.now()}`,
         timestamp: Date.now(),
       });
     },
