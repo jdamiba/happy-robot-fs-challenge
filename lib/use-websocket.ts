@@ -12,6 +12,7 @@ interface UseWebSocketOptions {
   url?: string;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  userId?: string;
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
@@ -30,6 +31,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       : "ws://localhost:3001/ws", // Default fallback for SSR
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
+    userId,
   } = options;
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -84,6 +86,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         setWsConnected(true);
         isConnectingRef.current = false;
         reconnectAttemptsRef.current = 0;
+
+        // Set user ID if provided
+        if (userId) {
+          console.log("Setting user ID on WebSocket connection:", userId);
+          sendMessage({
+            type: "SET_USER",
+            payload: { userId },
+            operationId: `set-user-${Date.now()}`,
+            timestamp: Date.now(),
+          });
+        }
       };
 
       wsRef.current.onmessage = (event) => {

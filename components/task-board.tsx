@@ -100,8 +100,10 @@ export function TaskBoard() {
     wsConnected,
   } = useAppStore();
 
-  const { joinProject, leaveProject } = useWebSocket();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const { joinProject, leaveProject } = useWebSocket({
+    userId: currentUser?.id,
+  });
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTask, setNewTask] = useState({
     title: "",
