@@ -107,21 +107,53 @@ happy-robot/
 - npm
 - Git
 - Docker (optional)
+- Clerk account (for authentication)
+
+### Clerk Authentication Setup
+
+1. **Create Clerk Account**:
+   - Go to [clerk.com](https://clerk.com) and sign up
+   - Create a new application
+   - Choose your preferred authentication method (Email, Google, GitHub, etc.)
+
+2. **Get Clerk Keys**:
+   - In your Clerk dashboard, go to **API Keys** section
+   - Copy the **Publishable Key** (starts with `pk_test_` or `pk_live_`)
+   - Copy the **Secret Key** (starts with `sk_test_` or `sk_live_`)
+
+3. **Configure Clerk URLs**:
+   - In Clerk dashboard, go to **Paths** section
+   - Set the following URLs:
+     - Sign-in URL: `/sign-in`
+     - Sign-up URL: `/sign-up`
+     - After sign-in URL: `/projects`
+     - After sign-up URL: `/projects`
+
+4. **Set up Webhooks** (for production):
+   - Go to **Webhooks** in Clerk dashboard
+   - Create webhook endpoint: `https://your-domain.com/api/webhooks/clerk`
+   - Subscribe to events: `user.created`, `user.deleted`
+   - Copy the webhook secret
 
 ### Environment Setup
 
 1. **Copy environment files**:
 
    ```bash
-   cp env.production .env.local
+   cp env.example .env.local
    cp websocket-server/env.example websocket-server/.env
    ```
 
-2. **Configure Clerk authentication**:
+2. **Configure environment variables**:
 
-   - Sign up at [clerk.com](https://clerk.com)
-   - Create a new application
-   - Copy your keys to `.env.local`
+   Edit `.env.local` with your Clerk keys:
+   ```env
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
+   CLERK_SECRET_KEY=sk_test_your_secret_key_here
+   DATABASE_URL=postgresql://happyrobot:happyrobot123@localhost:5432/happyrobot
+   NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+   WEBSOCKET_SERVER_URL=http://localhost:3001
+   ```
 
 3. **Set up database**:
    ```bash
