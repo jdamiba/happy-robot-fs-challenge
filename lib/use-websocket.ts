@@ -293,6 +293,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             wsRef.current.onmessage = (event) => {
               try {
                 const message = JSON.parse(event.data);
+                // Use the current values from the store
                 addWsMessage(message);
 
                 switch (message.type) {
@@ -348,24 +349,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setWsConnected(false);
       isConnectingRef.current = false;
     };
-  }, [
-    isClient,
-    url,
-    reconnectInterval,
-    maxReconnectAttempts,
-    setWsConnected,
-    addWsMessage,
-    handleTaskUpdate,
-    handleTaskCreate,
-    handleTaskDelete,
-    handleCommentUpdate,
-    handleCommentCreate,
-    handleCommentDelete,
-    handleUserPresence,
-    setUser,
-    userId,
-    userInfo,
-  ]);
+  }, [isClient]); // Only depend on isClient to run once
 
   // Cleanup on unmount
   useEffect(() => {
