@@ -1,12 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAppStore } from "./store";
-import {
-  WebSocketMessage,
-  TaskUpdate,
-  CommentUpdate,
-  ParsedTask,
-  Comment,
-} from "./types";
+import { WebSocketMessage } from "./types";
 
 interface UseWebSocketOptions {
   url?: string;
@@ -22,37 +16,23 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   const {
-    url = isClient && typeof window !== "undefined" && window.location
-      ? window.location.hostname === "localhost"
-        ? "ws://localhost:3001/ws" // Local development
-        : process.env.NEXT_PUBLIC_WS_URL ||
-          `wss://${window.location.hostname}/ws` // Production
-      : "ws://localhost:3001/ws", // Default fallback for SSR
+    url = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws",
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
-    userId,
+    userId = "test-user",
     userInfo,
   } = options;
 
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false);
-  const setUserRef = useRef<
-    | ((userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => void)
-    | null
-  >(null);
-  const userSetRef = useRef<boolean>(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const userSetRef = useRef(false);
   const currentProjectRef = useRef<string | null>(null);
-  const hasJoinedProjectRef = useRef<boolean>(false);
+  const hasJoinedProjectRef = useRef(false);
 
+  // Get Zustand store functions
   const {
     wsConnected,
     setWsConnected,
@@ -65,6 +45,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     handleCommentDelete,
     handleUserPresence,
   } = useAppStore();
+
+  // Check if we're on the client side
+  const isClient = typeof window !== "undefined";
 
   const sendMessage = useCallback(
     (message: WebSocketMessage) => {
@@ -86,7 +69,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         });
       }
     },
-    [wsConnected]
+    [wsConnected, userId]
   );
 
   const setUser = useCallback(
@@ -107,6 +90,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         userInfo,
         hasUserInfo: !!userInfo,
         userInfoKeys: userInfo ? Object.keys(userInfo) : [],
+        userInfoContent: userInfo
+          ? {
+              name: userInfo.name,
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              email: userInfo.email,
+            }
+          : null,
         timestamp: new Date().toISOString(),
       });
 
@@ -121,292 +112,87 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [sendMessage]
   );
 
-  // Store setUser in ref so it can be accessed in connect function
-  setUserRef.current = setUser;
-
-  const connect = useCallback(() => {
-    if (
-      !isClient || // Don't connect during SSR
-      isConnectingRef.current ||
-      wsRef.current?.readyState === WebSocket.OPEN
-    ) {
-      return;
-    }
-
-    isConnectingRef.current = true;
-    console.log("Connecting to WebSocket...", {
-      url,
-      timestamp: new Date().toISOString(),
-      env: {
-        NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-        NODE_ENV: process.env.NODE_ENV,
-      },
-    });
-
-    try {
-      wsRef.current = new WebSocket(url);
-      console.log("WebSocket instance created:", {
-        readyState: wsRef.current.readyState,
+  const joinProject = useCallback(
+    (projectId: string) => {
+      console.log("🔧 joinProject called:", {
+        projectId,
+        currentProject: currentProjectRef.current,
+        hasJoined: hasJoinedProjectRef.current,
+        wsConnected,
+        timestamp: new Date().toISOString(),
       });
 
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connected successfully", {
-          readyState: wsRef.current?.readyState,
-          url: wsRef.current?.url,
-          timestamp: new Date().toISOString(),
+      // Leave current project if different
+      if (
+        currentProjectRef.current &&
+        currentProjectRef.current !== projectId
+      ) {
+        sendMessage({
+          type: "LEAVE_PROJECT",
+          projectId: currentProjectRef.current,
+          operationId: `leave-project-${Date.now()}`,
+          timestamp: Date.now(),
         });
-        setWsConnected(true);
-        isConnectingRef.current = false;
-        reconnectAttemptsRef.current = 0;
+        hasJoinedProjectRef.current = false;
+      }
 
-        // Set user ID if provided (with a small delay to ensure WebSocket is fully ready)
-        if (userId) {
-          setTimeout(() => {
-            console.log("Setting user ID on WebSocket connection:", userId);
-            setUser(userId, userInfo);
-          }, 100);
-        } else {
-          console.log("No userId provided to WebSocket connection");
-        }
-      };
+      // Join new project
+      if (
+        projectId &&
+        (!hasJoinedProjectRef.current ||
+          currentProjectRef.current !== projectId)
+      ) {
+        currentProjectRef.current = projectId;
+        hasJoinedProjectRef.current = true;
 
-      wsRef.current.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          addWsMessage(message);
-
-          // Handle different message types
-          switch (message.type) {
-            case "TASK_UPDATE":
-              console.log("Received TASK_UPDATE:", message.payload);
-              handleTaskUpdate(message.payload as TaskUpdate);
-              break;
-            case "TASK_CREATE":
-              console.log("Received TASK_CREATE:", message.payload);
-              handleTaskCreate(message.payload as ParsedTask);
-              break;
-            case "TASK_DELETE":
-              console.log("Received TASK_DELETE:", message.payload);
-              const deletePayload = message.payload as { taskId: string };
-              handleTaskDelete(deletePayload.taskId);
-              break;
-            case "COMMENT_UPDATE":
-              console.log("Received COMMENT_UPDATE:", message.payload);
-              handleCommentUpdate(message.payload as CommentUpdate);
-              break;
-            case "COMMENT_CREATE":
-              console.log("Received COMMENT_CREATE:", message.payload);
-              handleCommentCreate(message.payload as Comment);
-              break;
-            case "COMMENT_DELETE":
-              console.log("Received COMMENT_DELETE:", message.payload);
-              const commentDeletePayload = message.payload as {
-                taskId: string;
-                id: string;
-              };
-              handleCommentDelete(
-                commentDeletePayload.taskId,
-                commentDeletePayload.id
-              );
-              break;
-            case "USER_PRESENCE":
-              console.log("Received USER_PRESENCE:", message.payload);
-              const presencePayload = message.payload as {
-                projectId: string;
-                activeUsers: Array<{
-                  userId: string;
-                  clientId: string;
-                  joinedAt: number;
-                  initials?: string;
-                }>;
-                userCount: number;
-              };
-              handleUserPresence(presencePayload);
-              break;
-
-            case "CONNECTION_ESTABLISHED":
-              console.log("🔗 WebSocket connection established on server side");
-              // Note: SET_USER will be sent by the useEffect when userId/userInfo are available
-              break;
-
-            case "ERROR":
-              const errorPayload = message.payload as { error: string };
-              console.error("WebSocket error:", errorPayload.error);
-              break;
-
-            default:
-              console.log("Unknown message type:", message.type);
-          }
-        } catch (error) {
-          console.error("Error parsing WebSocket message:", error);
-        }
-      };
-
-      wsRef.current.onclose = (event) => {
-        console.log("WebSocket disconnected:", {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-          readyState: wsRef.current?.readyState,
-          timestamp: new Date().toISOString(),
+        sendMessage({
+          type: "JOIN_PROJECT",
+          projectId,
+          userId,
+          operationId: `join-project-${Date.now()}`,
+          timestamp: Date.now(),
         });
+      }
+    },
+    [sendMessage, setUser]
+  );
 
-        // Reset state when connection is lost
-        userSetRef.current = false;
+  const leaveProject = useCallback(
+    (projectId: string) => {
+      console.log("🔧 leaveProject called:", {
+        projectId,
+        currentProject: currentProjectRef.current,
+        hasJoined: hasJoinedProjectRef.current,
+        timestamp: new Date().toISOString(),
+      });
+
+      sendMessage({
+        type: "LEAVE_PROJECT",
+        projectId,
+        operationId: `leave-project-${Date.now()}`,
+        timestamp: Date.now(),
+      });
+
+      if (currentProjectRef.current === projectId) {
         currentProjectRef.current = null;
         hasJoinedProjectRef.current = false;
-        setWsConnected(false);
-        isConnectingRef.current = false;
-
-        // Attempt to reconnect if not a manual close
-        if (
-          event.code !== 1000 &&
-          reconnectAttemptsRef.current < maxReconnectAttempts
-        ) {
-          reconnectAttemptsRef.current++;
-          console.log(
-            `Attempting to reconnect... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
-          );
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, reconnectInterval);
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error("WebSocket error:", {
-          error,
-          errorType: typeof error,
-          errorKeys: error ? Object.keys(error) : "no keys",
-          readyState: wsRef.current?.readyState,
-          url: wsRef.current?.url,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-        });
-        isConnectingRef.current = false;
-      };
-    } catch (error) {
-      console.error("Error creating WebSocket connection:", error);
-      isConnectingRef.current = false;
-    }
-  }, [
-    url,
-    reconnectInterval,
-    maxReconnectAttempts,
-    setWsConnected,
-    addWsMessage,
-    handleTaskUpdate,
-    handleTaskCreate,
-    handleTaskDelete,
-    handleCommentUpdate,
-    handleCommentCreate,
-    handleCommentDelete,
-    handleUserPresence,
-    isClient,
-    setUser,
-    userId,
-  ]);
+      }
+    },
+    [sendMessage]
+  );
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-
     if (wsRef.current) {
       wsRef.current.close(1000, "Manual disconnect");
       wsRef.current = null;
     }
-
-    // Reset state when disconnecting
-    userSetRef.current = false;
-    currentProjectRef.current = null;
-    hasJoinedProjectRef.current = false;
     setWsConnected(false);
     isConnectingRef.current = false;
   }, [setWsConnected]);
-
-  const joinProject = useCallback(
-    (projectId: string, userId?: string) => {
-      // Prevent duplicate joins to the same project
-      if (
-        currentProjectRef.current === projectId &&
-        hasJoinedProjectRef.current
-      ) {
-        console.log(
-          "Already joined project:",
-          projectId,
-          "- skipping duplicate join"
-        );
-        return;
-      }
-
-      console.log("joinProject called with:", projectId, "userId:", userId);
-
-      // Ensure user is set before joining project
-      if (userId && !userSetRef.current) {
-        console.log("Setting user before joining project:", userId);
-        setUser(userId, userInfo);
-      }
-
-      // Leave previous project if switching
-      if (
-        currentProjectRef.current &&
-        currentProjectRef.current !== projectId
-      ) {
-        console.log("Leaving previous project:", currentProjectRef.current);
-        sendMessage({
-          type: "LEAVE_PROJECT",
-          projectId: currentProjectRef.current,
-          userId: userId,
-          operationId: `leave-${Date.now()}`,
-          timestamp: Date.now(),
-        });
-      }
-
-      // Join new project
-      sendMessage({
-        type: "JOIN_PROJECT",
-        projectId: projectId,
-        userId: userId,
-        operationId: `join-${Date.now()}`,
-        timestamp: Date.now(),
-      });
-
-      // Update state tracking
-      currentProjectRef.current = projectId;
-      hasJoinedProjectRef.current = true;
-    },
-    [sendMessage, setUser]
-  );
-
-  const leaveProject = useCallback(
-    (projectId: string, userId?: string) => {
-      // Only leave if we're actually in this project
-      if (
-        currentProjectRef.current !== projectId ||
-        !hasJoinedProjectRef.current
-      ) {
-        console.log("Not currently in project:", projectId, "- skipping leave");
-        return;
-      }
-
-      console.log("leaveProject called with:", projectId, "userId:", userId);
-      sendMessage({
-        type: "LEAVE_PROJECT",
-        projectId: projectId,
-        userId: userId,
-        operationId: `leave-${Date.now()}`,
-        timestamp: Date.now(),
-      });
-
-      // Update state tracking
-      currentProjectRef.current = null;
-      hasJoinedProjectRef.current = false;
-    },
-    [sendMessage]
-  );
 
   // Call setUser when userId changes after WebSocket is connected
   // Only send SET_USER once per session to avoid spam
@@ -439,19 +225,147 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   useEffect(() => {
     if (!isClient) return; // Don't connect during SSR
 
+    // Use refs to avoid dependency issues
     const connectWithDelay = () => {
       setTimeout(() => {
         console.log("Attempting WebSocket connection after delay...");
-        connect();
+        // Call connect directly without depending on the function reference
+        if (
+          !isConnectingRef.current &&
+          wsRef.current?.readyState !== WebSocket.OPEN
+        ) {
+          isConnectingRef.current = true;
+          console.log("Connecting to WebSocket...", {
+            url,
+            timestamp: new Date().toISOString(),
+          });
+
+          try {
+            wsRef.current = new WebSocket(url);
+
+            wsRef.current.onopen = () => {
+              console.log("WebSocket connected successfully");
+              setWsConnected(true);
+              isConnectingRef.current = false;
+              reconnectAttemptsRef.current = 0;
+
+              // Set user ID if provided
+              if (userId) {
+                setTimeout(() => {
+                  console.log(
+                    "Setting user ID on WebSocket connection:",
+                    userId
+                  );
+                  setUser(userId, userInfo);
+                }, 100);
+              }
+            };
+
+            wsRef.current.onclose = (event) => {
+              console.log("WebSocket connection closed", {
+                code: event.code,
+                reason: event.reason,
+                wasClean: event.wasClean,
+              });
+              setWsConnected(false);
+              isConnectingRef.current = false;
+
+              // Attempt to reconnect if not a manual close
+              if (
+                event.code !== 1000 &&
+                reconnectAttemptsRef.current < maxReconnectAttempts
+              ) {
+                reconnectAttemptsRef.current++;
+                console.log(
+                  `Attempting to reconnect... (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
+                );
+                setTimeout(() => {
+                  connectWithDelay();
+                }, reconnectInterval);
+              }
+            };
+
+            wsRef.current.onerror = (error) => {
+              console.error("WebSocket error:", error);
+              isConnectingRef.current = false;
+            };
+
+            wsRef.current.onmessage = (event) => {
+              try {
+                const message = JSON.parse(event.data);
+                addWsMessage(message);
+
+                switch (message.type) {
+                  case "TASK_UPDATE":
+                    handleTaskUpdate(message.payload);
+                    break;
+                  case "TASK_CREATE":
+                    handleTaskCreate(message.payload);
+                    break;
+                  case "TASK_DELETE":
+                    handleTaskDelete(message.payload.taskId);
+                    break;
+                  case "COMMENT_UPDATE":
+                    handleCommentUpdate(message.payload);
+                    break;
+                  case "COMMENT_CREATE":
+                    handleCommentCreate(message.payload);
+                    break;
+                  case "COMMENT_DELETE":
+                    handleCommentDelete(
+                      message.payload.taskId,
+                      message.payload.commentId
+                    );
+                    break;
+                  case "USER_PRESENCE":
+                    handleUserPresence(message.payload);
+                    break;
+                }
+              } catch (error) {
+                console.error("Error parsing WebSocket message:", error);
+              }
+            };
+          } catch (error) {
+            console.error("Error creating WebSocket connection:", error);
+            isConnectingRef.current = false;
+          }
+        }
       }, 1000); // 1 second delay
     };
 
     connectWithDelay();
 
     return () => {
-      disconnect();
+      // Cleanup function
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      if (wsRef.current) {
+        wsRef.current.close(1000, "Component unmounting");
+        wsRef.current = null;
+      }
+      setWsConnected(false);
+      isConnectingRef.current = false;
     };
-  }, [isClient, connect, disconnect]);
+  }, [
+    isClient,
+    url,
+    reconnectInterval,
+    maxReconnectAttempts,
+    setWsConnected,
+    addWsMessage,
+    handleTaskUpdate,
+    handleTaskCreate,
+    handleTaskDelete,
+    handleCommentUpdate,
+    handleCommentCreate,
+    handleCommentDelete,
+    handleUserPresence,
+    setUser,
+    userId,
+    userInfo,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -459,16 +373,17 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
+      if (wsRef.current) {
+        wsRef.current.close(1000, "Component unmounting");
+      }
     };
   }, []);
 
   return {
     wsConnected,
-    connect,
-    disconnect,
     sendMessage,
     joinProject,
     leaveProject,
-    setUser,
+    disconnect,
   };
 }

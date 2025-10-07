@@ -199,11 +199,11 @@ export function TaskBoard() {
         userId: currentUser.id,
         wsConnected,
       });
-      joinProject(currentProject.id, currentUser.id);
+      joinProject(currentProject.id);
 
       return () => {
         console.log("Leaving project:", currentProject.id);
-        leaveProject(currentProject.id, currentUser.id);
+        leaveProject(currentProject.id);
       };
     }
   }, [
