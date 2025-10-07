@@ -52,9 +52,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Broadcast task update to WebSocket clients
     console.log("Broadcasting task update:", {
-      taskId: task.id,
+      originalId: id,
+      taskIdFromDB: task.id,
       projectId: task.projectId,
       changes: validatedData,
+      idsMatch: id === task.id,
     });
 
     try {
@@ -64,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       await websocketClient.broadcastTaskUpdate(
         task.projectId,
         {
-          id: task.id,
+          id: id, // Use the original task ID from the route parameter
           projectId: task.projectId,
           changes: validatedData,
           operationId: generateOperationId(),

@@ -148,6 +148,9 @@ export class TaskService {
   static async update(id: string, data: UpdateTaskInput): Promise<ParsedTask> {
     const taskData = stringifyTaskData(data);
 
+    // Ensure we preserve the original task ID
+    taskData.id = id;
+
     const task = await prisma.task.update({
       where: { id },
       data: taskData,
