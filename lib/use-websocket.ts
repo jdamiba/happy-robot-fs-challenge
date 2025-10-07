@@ -427,7 +427,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           : null,
         timestamp: new Date().toISOString(),
       });
-      setUser(userId, userInfo);
+
+      // Add a small delay to ensure WebSocket is fully ready
+      setTimeout(() => {
+        setUser(userId, userInfo);
+      }, 200);
     }
   }, [userId, userInfo, wsConnected, setUser]);
 
