@@ -195,7 +195,11 @@ class WebSocketManager {
   }
 
   // Public methods for broadcasting updates
-  public broadcastTaskUpdate(projectId: string, update: TaskUpdate, userId?: string) {
+  public broadcastTaskUpdate(
+    projectId: string,
+    update: TaskUpdate,
+    userId?: string
+  ) {
     const message: WebSocketMessage = {
       type: "TASK_UPDATE",
       payload: update,

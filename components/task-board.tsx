@@ -161,14 +161,27 @@ export function TaskBoard() {
   const [selectedTask, setSelectedTask] = useState<ParsedTask | null>(null);
 
   // Sync selectedTask with tasks array updates (for real-time updates)
+  // But only if the modal is not open to prevent cycling
   useEffect(() => {
     if (selectedTask) {
       const updatedTask = tasks.find((t) => t.id === selectedTask.id);
-      if (
-        updatedTask &&
-        JSON.stringify(updatedTask) !== JSON.stringify(selectedTask)
-      ) {
-        setSelectedTask(updatedTask);
+      if (updatedTask) {
+        // Only update if the task has actually changed and it's not just a re-render
+        const hasSignificantChanges =
+          updatedTask.status !== selectedTask.status ||
+          updatedTask.title !== selectedTask.title ||
+          JSON.stringify(updatedTask.configuration) !==
+            JSON.stringify(selectedTask.configuration);
+
+        if (hasSignificantChanges) {
+          console.log("🔄 Syncing selectedTask with tasks array update:", {
+            taskId: selectedTask.id,
+            oldStatus: selectedTask.status,
+            newStatus: updatedTask.status,
+            timestamp: new Date().toISOString(),
+          });
+          setSelectedTask(updatedTask);
+        }
       }
     }
   }, [tasks, selectedTask?.id]); // Only depend on the ID, not the entire object
@@ -683,7 +696,7 @@ function TaskDetailModal({
   const [editedTask, setEditedTask] = useState(task);
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Update editedTask when task prop changes
+  // Update editedTask when task prop changes, but avoid cycling
   useEffect(() => {
     console.log("🔄 TaskDetailModal task prop changed:", {
       taskId: task.id,
@@ -691,9 +704,34 @@ function TaskDetailModal({
       status: task.status,
       timestamp: new Date().toISOString(),
     });
-    setEditedTask(task);
-    setIsEditing(false); // Reset editing state when task changes
-  }, [task.id, task.title, task.status]); // Only depend on specific properties
+
+    // Only update if we're not currently editing and the task has actually changed
+    if (!isEditing) {
+      const hasSignificantChanges =
+        task.status !== editedTask.status ||
+        task.title !== editedTask.title ||
+        JSON.stringify(task.configuration) !==
+          JSON.stringify(editedTask.configuration);
+
+      if (hasSignificantChanges) {
+        console.log("📝 Updating editedTask with new task data:", {
+          taskId: task.id,
+          oldStatus: editedTask.status,
+          newStatus: task.status,
+        });
+        setEditedTask(task);
+      }
+    }
+  }, [
+    task.id,
+    task.title,
+    task.status,
+    task.configuration,
+    isEditing,
+    editedTask.status,
+    editedTask.title,
+    editedTask.configuration,
+  ]);
 
   // Handle click outside to close
   const handleBackdropClick = (e: React.MouseEvent) => {
