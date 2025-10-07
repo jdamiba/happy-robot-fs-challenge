@@ -51,10 +51,21 @@ The comprehensive guide includes:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    HTTP API    ┌─────────────────┐
-│   Next.js App   │◄─────────────►│   PostgreSQL    │
-│   (Frontend)    │                │   Database      │
-└─────────────────┘                └─────────────────┘
+┌─────────────────┐    JWT Auth     ┌─────────────────┐
+│   Clerk.com     │◄──────────────►│   Next.js App   │
+│  (Auth Service) │                 │   (Frontend)    │
+└─────────────────┘                 └─────────────────┘
+         │                                   │
+         │ Webhooks                          │ HTTP API
+         │ (user.created,                    ▼
+         │  user.deleted)            ┌─────────────────┐
+         │                           │   PostgreSQL    │
+         ▼                           │   Database      │
+┌─────────────────┐                 └─────────────────┘
+│  Next.js API    │                          │
+│  /api/webhooks/ │                          │
+│     /clerk      │                          │
+└─────────────────┘                          │
          │                                   │
          │ WebSocket                         │
          ▼                                   │
@@ -66,6 +77,14 @@ The comprehensive guide includes:
          │ HTTP Broadcast                    │
          └───────────────────────────────────┘
 ```
+
+### Authentication Flow
+
+1. **User Authentication**: Users sign in through Clerk's hosted authentication UI
+2. **JWT Tokens**: Clerk provides JWT tokens for authenticated requests
+3. **API Authorization**: Next.js API routes validate JWT tokens from Clerk
+4. **User Management**: Clerk webhooks sync user data to PostgreSQL database
+5. **Real-time Updates**: WebSocket server handles live collaboration features
 
 ## ✨ Key Features
 
@@ -112,16 +131,19 @@ happy-robot/
 ### Clerk Authentication Setup
 
 1. **Create Clerk Account**:
+
    - Go to [clerk.com](https://clerk.com) and sign up
    - Create a new application
    - Choose your preferred authentication method (Email, Google, GitHub, etc.)
 
 2. **Get Clerk Keys**:
+
    - In your Clerk dashboard, go to **API Keys** section
    - Copy the **Publishable Key** (starts with `pk_test_` or `pk_live_`)
    - Copy the **Secret Key** (starts with `sk_test_` or `sk_live_`)
 
 3. **Configure Clerk URLs**:
+
    - In Clerk dashboard, go to **Paths** section
    - Set the following URLs:
      - Sign-in URL: `/sign-in`
@@ -147,6 +169,7 @@ happy-robot/
 2. **Configure environment variables**:
 
    Edit `.env.local` with your Clerk keys:
+
    ```env
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
    CLERK_SECRET_KEY=sk_test_your_secret_key_here
