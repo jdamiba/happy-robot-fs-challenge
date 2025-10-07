@@ -95,7 +95,7 @@ class WebSocketManager {
         break;
       default:
         // Forward message to other clients in the same project
-        this.broadcastToProject(client.projectId, message, clientId);
+        this.broadcastToProject(client.projectId, message, client.userId);
     }
   }
 
@@ -179,7 +179,7 @@ class WebSocketManager {
   private broadcastToProject(
     projectId: string | undefined,
     message: WebSocketMessage,
-    excludeClientId?: string
+    excludeUserId?: string
   ) {
     if (!projectId) return;
 
@@ -187,21 +187,23 @@ class WebSocketManager {
     if (!room) return;
 
     for (const clientId of room) {
-      if (clientId !== excludeClientId) {
+      const client = this.clients.get(clientId);
+      if (client && client.userId !== excludeUserId) {
         this.sendMessage(clientId, message);
       }
     }
   }
 
   // Public methods for broadcasting updates
-  public broadcastTaskUpdate(projectId: string, update: TaskUpdate) {
+  public broadcastTaskUpdate(projectId: string, update: TaskUpdate, userId?: string) {
     const message: WebSocketMessage = {
       type: "TASK_UPDATE",
       payload: update,
       operationId: update.operationId,
       timestamp: update.timestamp,
+      userId,
     };
-    this.broadcastToProject(projectId, message);
+    this.broadcastToProject(projectId, message, userId);
   }
 
   public broadcastTaskCreate(projectId: string, task: ParsedTask) {
