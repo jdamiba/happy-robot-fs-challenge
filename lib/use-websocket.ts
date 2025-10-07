@@ -306,7 +306,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     isClient,
     setUser,
     userId,
-    userInfo,
   ]);
 
   const disconnect = useCallback(() => {
@@ -379,7 +378,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       currentProjectRef.current = projectId;
       hasJoinedProjectRef.current = true;
     },
-    [sendMessage, setUser, userInfo]
+    [sendMessage, setUser]
   );
 
   const leaveProject = useCallback(

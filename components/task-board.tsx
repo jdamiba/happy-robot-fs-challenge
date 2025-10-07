@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAppStore } from "@/lib/store";
 import { useWebSocket } from "@/lib/use-websocket";
@@ -111,16 +111,23 @@ export function TaskBoard() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Log user info being passed to WebSocket
-  const userInfoForWebSocket = user
-    ? {
-        name:
-          user.fullName ||
-          `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
-        email: user.primaryEmailAddress?.emailAddress || undefined,
-      }
-    : undefined;
+  const userInfoForWebSocket = useMemo(() => {
+    return user
+      ? {
+          name:
+            user.fullName ||
+            `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+          firstName: user.firstName || undefined,
+          lastName: user.lastName || undefined,
+          email: user.primaryEmailAddress?.emailAddress || undefined,
+        }
+      : undefined;
+  }, [
+    user?.fullName,
+    user?.firstName,
+    user?.lastName,
+    user?.primaryEmailAddress?.emailAddress,
+  ]);
 
   console.log("🔍 TaskBoard - User info for WebSocket:", {
     user,
@@ -157,11 +164,14 @@ export function TaskBoard() {
   useEffect(() => {
     if (selectedTask) {
       const updatedTask = tasks.find((t) => t.id === selectedTask.id);
-      if (updatedTask) {
+      if (
+        updatedTask &&
+        JSON.stringify(updatedTask) !== JSON.stringify(selectedTask)
+      ) {
         setSelectedTask(updatedTask);
       }
     }
-  }, [tasks, selectedTask]);
+  }, [tasks, selectedTask?.id]); // Only depend on the ID, not the entire object
 
   useEffect(() => {
     if (currentProject) {
@@ -179,7 +189,7 @@ export function TaskBoard() {
 
       loadTasks();
     }
-  }, [currentProject?.id, setTasks, currentProject]); // Only depend on stable values
+  }, [currentProject?.id, setTasks]); // Only depend on stable values
 
   // Join project when WebSocket is connected and user is available
   useEffect(() => {
@@ -683,7 +693,7 @@ function TaskDetailModal({
     });
     setEditedTask(task);
     setIsEditing(false); // Reset editing state when task changes
-  }, [task]);
+  }, [task.id, task.title, task.status]); // Only depend on specific properties
 
   // Handle click outside to close
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -1221,7 +1231,7 @@ function CommentsSection({
     } catch (error) {
       console.error("Failed to load comments:", error);
     }
-  }, [setComments, task, onCommentAdd]);
+  }, [setComments, task.id, onCommentAdd]);
 
   // Load comments when component mounts
   useEffect(() => {
