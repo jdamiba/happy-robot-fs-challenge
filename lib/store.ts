@@ -566,13 +566,24 @@ export const useAppStore = create<AppState>()(
 
       // Real-time update handlers
       handleTaskUpdate: (update) => {
+        console.log("Zustand handleTaskUpdate called:", update);
         set((state) => {
           const taskIndex = state.tasks.findIndex((t) => t.id === update.id);
-          if (taskIndex === -1) return state;
+          if (taskIndex === -1) {
+            console.log("Task not found for update:", update.id);
+            return state;
+          }
 
           const updatedTask = { ...state.tasks[taskIndex], ...update.changes };
           const newTasks = [...state.tasks];
           newTasks[taskIndex] = updatedTask;
+
+          console.log("Task updated in store:", {
+            taskId: update.id,
+            oldStatus: state.tasks[taskIndex].status,
+            newStatus: updatedTask.status,
+            changes: update.changes,
+          });
 
           return { tasks: newTasks };
         });

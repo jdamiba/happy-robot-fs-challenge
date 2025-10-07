@@ -102,6 +102,14 @@ export function TaskBoard() {
     wsConnected,
   } = useAppStore();
 
+  // Log when component re-renders due to tasks array changes
+  console.log("🎨 TaskBoard re-rendered with tasks:", {
+    taskCount: tasks.length,
+    taskTitles: tasks.map((t) => t.title),
+    taskStatuses: tasks.map((t) => t.status),
+    timestamp: new Date().toISOString(),
+  });
+
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   // Log user info being passed to WebSocket
@@ -543,6 +551,15 @@ export function TaskBoard() {
                   const isBlocked = isTaskBlocked(task);
                   const depStatus = getTaskDependencyStatus(task);
 
+                  // Log when task card is rendered with updated data
+                  console.log("🎯 Task card rendered:", {
+                    taskId: task.id,
+                    title: task.title,
+                    status: task.status,
+                    column: column.status,
+                    timestamp: new Date().toISOString(),
+                  });
+
                   return (
                     <Card
                       key={task.id}
@@ -670,6 +687,12 @@ function TaskDetailModal({
 
   // Update editedTask when task prop changes
   useEffect(() => {
+    console.log("🔄 TaskDetailModal task prop changed:", {
+      taskId: task.id,
+      title: task.title,
+      status: task.status,
+      timestamp: new Date().toISOString(),
+    });
     setEditedTask(task);
     setIsEditing(false); // Reset editing state when task changes
   }, [task]);

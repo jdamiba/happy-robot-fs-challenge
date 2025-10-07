@@ -105,12 +105,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         if (userId) {
           setTimeout(() => {
             console.log("Setting user ID on WebSocket connection:", userId);
-            sendMessage({
-              type: "SET_USER",
-              payload: { userId, userInfo },
-              operationId: `set-user-${Date.now()}`,
-              timestamp: Date.now(),
-            });
+            setUser(userId, userInfo);
           }, 100);
         } else {
           console.log("No userId provided to WebSocket connection");
@@ -125,12 +120,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           // Handle different message types
           switch (message.type) {
             case "TASK_UPDATE":
+              console.log("Received TASK_UPDATE:", message.payload);
               handleTaskUpdate(message.payload as TaskUpdate);
               break;
             case "TASK_CREATE":
+              console.log("Received TASK_CREATE:", message.payload);
               handleTaskCreate(message.payload as ParsedTask);
               break;
             case "TASK_DELETE":
+              console.log("Received TASK_DELETE:", message.payload);
               const deletePayload = message.payload as { taskId: string };
               handleTaskDelete(deletePayload.taskId);
               break;
@@ -426,7 +424,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       });
       setUser(userId, userInfo);
     }
-  }, [userId, userInfo, wsConnected, setUser]);
+  }, [userId, userInfo, wsConnected]);
 
   // Connect on mount with a small delay to ensure page is ready
   useEffect(() => {
