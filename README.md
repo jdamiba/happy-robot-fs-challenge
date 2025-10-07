@@ -4,42 +4,23 @@ A modern, real-time collaborative project management application built with Next
 
 ## 🚀 Quick Start
 
-### Option 1: Automated Setup (Recommended)
-
 ```bash
 # Clone the repository
 git clone <your-repository-url>
 cd happy-robot
 
-# Run the setup script
-./setup-local.sh
-
-# Start both services
-./start-dev.sh
-```
-
-### Option 2: Manual Setup
-
-```bash
 # Install dependencies
-npm install
-cd websocket-server && npm install && cd ..
+npm install && cd websocket-server && npm install && cd ..
 
-# Set up environment files
-cp env.example .env
-cp websocket-server/env.example websocket-server/.env
+# Set up environment variables (see comprehensive guide)
+cp env.production .env.local
+# Edit .env.local with your Clerk keys and database URL
 
-# Set up database (choose one option)
-
-# Option A: Using Docker (Recommended)
+# Start database (Docker)
 cd database && docker-compose up -d && cd ..
 
-# Option B: Using local PostgreSQL
-export DATABASE_URL="postgresql://username:password@localhost:5432/happyrobot"
-cd database && ./setup.sh && cd ..
-
-# Generate Prisma client
-npx prisma generate
+# Initialize database
+npx prisma generate && npx prisma db push
 
 # Start WebSocket server (Terminal 1)
 cd websocket-server && npm start
@@ -48,12 +29,30 @@ cd websocket-server && npm start
 npm run dev
 ```
 
+Access the application at http://localhost:3000
+
+## 📚 Complete Documentation
+
+**👉 [COMPREHENSIVE_SETUP_GUIDE.md](./COMPREHENSIVE_SETUP_GUIDE.md)**
+
+The comprehensive guide includes:
+
+- **Complete setup instructions** for local development
+- **Clerk authentication setup** with step-by-step configuration
+- **Database setup** with multiple options (Docker, local, cloud)
+- **Environment configuration** for all environments
+- **Real-time testing** with multiple browser windows
+- **API documentation** with interactive Swagger UI
+- **Production deployment** to Render.com
+- **Monitoring and troubleshooting** guides
+- **Quick reference** commands and URLs
+
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    HTTP API    ┌─────────────────┐
-│   Next.js App   │◄─────────────►│   Database      │
-│   (Frontend)    │                │   (PostgreSQL)  │
+│   Next.js App   │◄─────────────►│   PostgreSQL    │
+│   (Frontend)    │                │   Database      │
 └─────────────────┘                └─────────────────┘
          │                                   │
          │ WebSocket                         │
@@ -67,96 +66,53 @@ npm run dev
          └───────────────────────────────────┘
 ```
 
+## ✨ Key Features
+
+- ✅ **Real-time collaboration** - See changes instantly across all clients
+- ✅ **Project management** - Create, edit, and organize projects
+- ✅ **Task management** - Kanban board with drag-and-drop functionality
+- ✅ **Comment system** - Threaded comments with live updates
+- ✅ **User presence** - Track active users per project
+- ✅ **Task dependencies** - Link tasks with dependency validation
+- ✅ **Status transitions** - Enforce business rules for status changes
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
+- **Authentication**: Clerk
+- **Database**: PostgreSQL with Prisma ORM
+- **Real-time**: WebSocket server with Express
+- **Deployment**: Render.com
+
 ## 📁 Project Structure
 
 ```
 happy-robot/
 ├── app/                          # Next.js App Router
 │   ├── api/                      # API routes
-│   │   ├── projects/             # Project management
-│   │   ├── tasks/                # Task management
-│   │   ├── comments/             # Comment system
-│   │   └── webhooks/             # Clerk webhooks
-│   ├── projects/                 # Project pages
-│   └── globals.css               # Global styles
+│   └── projects/                 # Project pages
 ├── components/                   # React components
-│   ├── ui/                       # Reusable UI components
-│   ├── task-board.tsx            # Kanban board
-│   ├── project-list.tsx          # Project listing
-│   └── landing-page.tsx          # Landing page
 ├── lib/                          # Utilities and services
-│   ├── api-client.ts             # API client
-│   ├── auth-utils.ts             # Authentication helpers
-│   ├── db.ts                     # Database services
-│   ├── store.ts                  # Zustand store
-│   ├── use-websocket.ts          # WebSocket hook
-│   ├── websocket-client.ts       # WebSocket client service
-│   └── types.ts                  # TypeScript types
 ├── websocket-server/             # Standalone WebSocket server
-│   ├── src/
-│   │   └── server.js             # Main server file
-│   ├── test-client.js            # Test client
-│   ├── load-test.yml             # Load testing config
-│   └── package.json              # Server dependencies
-├── database/                     # Database setup and migrations
-│   ├── migrations/               # SQL migration files
-│   ├── docker-compose.yml        # Docker database setup
-│   ├── setup.sh                  # Database setup script
-│   └── verify.js                 # Database verification
 ├── prisma/                       # Database schema
-│   └── schema.prisma             # Prisma schema
 └── scripts/                      # Utility scripts
-    ├── setup-database.sh         # Database setup
-    └── start.sh                  # Development startup
 ```
 
-## 🔧 Features
-
-### Real-Time Collaboration
-
-- ✅ **Live Updates** - See changes instantly across all clients
-- ✅ **Task Management** - Create, edit, delete tasks in real-time
-- ✅ **Comment System** - Threaded comments with live updates
-- ✅ **Project Rooms** - Isolated collaboration spaces
-- ✅ **User Presence** - Track active users per project
-
-### Task Management
-
-- ✅ **Kanban Board** - Drag-and-drop task organization
-- ✅ **Task Dependencies** - Link tasks with dependency validation
-- ✅ **Status Transitions** - Enforce business rules for status changes
-- ✅ **Task Details** - Rich task editing with modal interface
-- ✅ **Visual Indicators** - Show blocked tasks and dependencies
-
-### Project Management
-
-- ✅ **Project Creation** - Easy project setup
-- ✅ **Project Navigation** - Seamless project switching
-- ✅ **Project Deletion** - Safe project removal with cleanup
-- ✅ **User Management** - Clerk authentication integration
-
-### Technical Features
-
-- ✅ **WebSocket Server** - Standalone, scalable real-time server
-- ✅ **Optimistic Updates** - Instant UI feedback
-- ✅ **Error Handling** - Graceful error recovery
-- ✅ **Connection Management** - Auto-reconnection and health monitoring
-- ✅ **Docker Support** - Containerized development and deployment
-
-## 🛠️ Development
+## 🔧 Development
 
 ### Prerequisites
 
 - Node.js 18+
 - npm
 - Git
+- Docker (optional)
 
 ### Environment Setup
 
 1. **Copy environment files**:
 
    ```bash
-   cp env.example .env
+   cp env.production .env.local
    cp websocket-server/env.example websocket-server/.env
    ```
 
@@ -164,30 +120,15 @@ happy-robot/
 
    - Sign up at [clerk.com](https://clerk.com)
    - Create a new application
-   - Copy your keys to `.env`
+   - Copy your keys to `.env.local`
 
 3. **Set up database**:
-
-   **Option A: Using Docker (Recommended)**
-
    ```bash
    cd database
    docker-compose up -d
    cd ..
    npx prisma generate
    ```
-
-   **Option B: Using Local PostgreSQL**
-
-   ```bash
-   export DATABASE_URL="postgresql://username:password@localhost:5432/happyrobot"
-   cd database
-   ./setup.sh
-   cd ..
-   npx prisma generate
-   ```
-
-   See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed instructions.
 
 ### Running Locally
 
@@ -209,9 +150,9 @@ npm run dev
 - **App**: http://localhost:3000
 - **WebSocket Server**: http://localhost:3001
 - **Health Check**: http://localhost:3001/health
-- **Server Stats**: http://localhost:3001/stats
+- **API Docs**: http://localhost:3000/api-docs
 
-### Testing Real-Time Collaboration
+## 🧪 Testing Real-Time Collaboration
 
 1. **Open multiple browser windows**:
 
@@ -219,126 +160,49 @@ npm run dev
    - Window 2: `http://localhost:3000` (User B, incognito)
 
 2. **Test scenarios**:
-
    - Create projects and tasks
    - Edit tasks simultaneously
    - Add comments in real-time
    - Move tasks between status columns
    - Delete tasks and projects
 
-3. **Monitor WebSocket activity**:
-
-   ```bash
-   # Test WebSocket server
-   cd websocket-server && node test-client.js
-
-   # Check server health
-   curl http://localhost:3001/health
-
-   # View server stats
-   curl http://localhost:3001/stats
-   ```
-
-## 🐳 Docker Development
-
-### Using Docker Compose
-
-```bash
-# Start all services
-docker-compose -f docker-compose.dev.yml up --build
-
-# Stop services
-docker-compose -f docker-compose.dev.yml down
-```
-
-### Individual Containers
-
-```bash
-# Build and run WebSocket server
-cd websocket-server
-docker build -t happy-robot-websocket .
-docker run -p 3001:3001 happy-robot-websocket
-
-# Build and run Next.js app
-docker build -f Dockerfile.dev -t happy-robot-app .
-docker run -p 3000:3000 happy-robot-app
-```
-
-## 📚 Documentation
-
-- **[Local Development Guide](LOCAL_DEVELOPMENT_GUIDE.md)** - Detailed setup and testing instructions
-- **[Real-Time Flow Documentation](REAL_TIME_FLOW.md)** - Complete flow trace of real-time updates
-- **[Flow Diagrams](FLOW_DIAGRAM.md)** - Visual representations of system interactions
-- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
-- **[WebSocket Server README](websocket-server/README.md)** - Standalone server documentation
-
-## 🧪 Testing
-
-### Unit Testing
-
-```bash
-# Run tests (when implemented)
-npm test
-```
-
-### Integration Testing
-
-```bash
-# Test WebSocket server
-cd websocket-server && node test-client.js
-
-# Load testing
-cd websocket-server && artillery run load-test.yml
-```
-
-### Manual Testing
-
-- Follow the [Local Development Guide](LOCAL_DEVELOPMENT_GUIDE.md) for comprehensive testing scenarios
-- Test real-time collaboration with multiple browser windows
-- Verify WebSocket connection health and reconnection
-
 ## 🚀 Deployment
 
 ### Production Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions for:
+See [COMPREHENSIVE_SETUP_GUIDE.md](./COMPREHENSIVE_SETUP_GUIDE.md#production-deployment) for detailed deployment instructions including:
 
-- Render.com
-- Vercel + Railway
-- Docker containers
-- Other cloud platforms
+- Render.com deployment
+- Environment configuration
+- Database setup
+- WebSocket server deployment
+- Testing production deployment
 
-### Environment Variables
+## 📖 API Documentation
 
-```env
-# Required for production
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-DATABASE_URL=postgresql://...
-NEXT_PUBLIC_WS_URL=wss://your-websocket-server.com/ws
-WEBSOCKET_SERVER_URL=https://your-websocket-server.com
-```
+- **Interactive Documentation**: http://localhost:3000/api-docs
+- **OpenAPI Spec**: http://localhost:3000/api/docs
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Test thoroughly
+4. Test thoroughly with multiple browser windows
 5. Submit a pull request
-
-### Development Guidelines
-
-- Follow TypeScript best practices
-- Write meaningful commit messages
-- Test real-time features with multiple clients
-- Update documentation for new features
 
 ## 📄 License
 
 MIT License - see LICENSE file for details.
 
 ## 🆘 Support
+
+### Getting Help
+
+1. Check the [COMPREHENSIVE_SETUP_GUIDE.md](./COMPREHENSIVE_SETUP_GUIDE.md#monitoring--troubleshooting) troubleshooting section
+2. Review server logs for error messages
+3. Verify environment variables are set correctly
+4. Test individual components using the provided test scripts
 
 ### Common Issues
 
@@ -347,23 +211,8 @@ MIT License - see LICENSE file for details.
 3. **Database errors**: Run `npx prisma db push` to sync schema
 4. **Authentication issues**: Verify Clerk configuration in `.env`
 
-### Getting Help
-
-- Check the troubleshooting sections in the documentation
-- Review server logs for error messages
-- Test individual components using the provided test scripts
-
-## 🎯 Roadmap
-
-- [ ] **User Roles & Permissions** - Granular access control
-- [ ] **File Attachments** - Support for task attachments
-- [ ] **Notifications** - Real-time notifications and alerts
-- [ ] **Time Tracking** - Built-in time tracking for tasks
-- [ ] **Reporting** - Project analytics and reporting
-- [ ] **Mobile App** - React Native mobile application
-- [ ] **API Documentation** - OpenAPI/Swagger documentation
-- [ ] **Advanced Search** - Full-text search across projects and tasks
-
 ---
 
 **Happy coding! 🚀** Build amazing projects with real-time collaboration!
+
+For complete setup instructions, see [COMPREHENSIVE_SETUP_GUIDE.md](./COMPREHENSIVE_SETUP_GUIDE.md)
