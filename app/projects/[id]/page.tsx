@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { apiClient } from "@/lib/api-client";
 import { TaskBoard } from "@/components/task-board";
@@ -15,34 +15,13 @@ export default function ProjectPage() {
   const router = useRouter();
   const projectId = params.id as string;
 
-  const {
-    currentProject,
-    setCurrentProject,
-    setProjects,
-    setTasks,
-    loading,
-    error,
-  } = useAppStore();
+  const { currentProject, setCurrentProject, setProjects, setTasks, loading } =
+    useAppStore();
 
   const [projectLoaded, setProjectLoaded] = useState(false);
   const loadingRef = useRef(false);
 
-  useEffect(() => {
-    if (isSignedIn && projectId && !projectLoaded && !loadingRef.current) {
-      loadingRef.current = true;
-      loadProject();
-    }
-  }, [isSignedIn, projectId, projectLoaded]);
-
-  // Monitor for project deletion - redirect if current project no longer exists
-  useEffect(() => {
-    if (projectLoaded && currentProject && currentProject.id !== projectId) {
-      // Project was deleted or changed, redirect to projects list
-      router.push("/projects");
-    }
-  }, [currentProject, projectId, projectLoaded, router]);
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       // Fetch projects using API client directly
       const projectsResponse = await apiClient.getProjects();
@@ -76,7 +55,29 @@ export default function ProjectPage() {
     } finally {
       loadingRef.current = false;
     }
-  };
+  }, [
+    projectId,
+    setProjects,
+    setCurrentProject,
+    setTasks,
+    setProjectLoaded,
+    router,
+  ]);
+
+  useEffect(() => {
+    if (isSignedIn && projectId && !projectLoaded && !loadingRef.current) {
+      loadingRef.current = true;
+      loadProject();
+    }
+  }, [isSignedIn, projectId, projectLoaded, loadProject]);
+
+  // Monitor for project deletion - redirect if current project no longer exists
+  useEffect(() => {
+    if (projectLoaded && currentProject && currentProject.id !== projectId) {
+      // Project was deleted or changed, redirect to projects list
+      router.push("/projects");
+    }
+  }, [currentProject, projectId, projectLoaded, router]);
 
   const handleBackClick = () => {
     router.back();

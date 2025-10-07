@@ -2,13 +2,7 @@
 
 import { SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import {
   Users,
@@ -25,7 +19,7 @@ import {
 } from "lucide-react";
 
 export function LandingPage() {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn } = useUser();
 
   if (isSignedIn) {
     return null; // Don&apos;t show landing page if user is signed in

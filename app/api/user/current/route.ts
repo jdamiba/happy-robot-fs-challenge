@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-utils";
 
 /**
@@ -47,7 +47,7 @@ import { getCurrentUser } from "@/lib/auth-utils";
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const user = await getCurrentUser();
 
@@ -61,11 +61,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: user.id,
-        clerkId: user.clerkId,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        id: user.data!.id,
+        clerkId: user.data!.clerkId,
+        email: user.data!.email,
+        firstName: user.data!.firstName,
+        lastName: user.data!.lastName,
       },
     });
   } catch (error) {

@@ -126,7 +126,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const validatedData = CreateCommentSchema.parse({
       ...body,
       taskId: id,
-      authorId: user.id, // Use internal database user ID
+      authorId: user.data!.id, // Use internal database user ID
     });
 
     // Generate a unique ID for the comment
@@ -144,9 +144,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const comment = await CommentService.create(commentData);
     console.log("Comment created successfully:", {
-      id: comment.id,
-      taskId: comment.taskId,
-      authorId: comment.authorId,
+      id: (comment as unknown as { id: string }).id,
+      taskId: (comment as unknown as { taskId: string }).taskId,
+      authorId: (comment as unknown as { authorId: string }).authorId,
     });
 
     // Get task to find project ID for broadcasting
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (task) {
       // Broadcast comment creation to WebSocket clients
       console.log("Broadcasting comment creation:", {
-        commentId: comment.id,
+        commentId: (comment as unknown as { id: string }).id,
         taskId: task.id,
         projectId: task.projectId,
       });
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         await websocketClient.broadcastCommentCreate(
           task.projectId,
           comment,
-          user.id
+          user.data!.id
         );
         console.log("Comment creation broadcast successful");
       } catch (broadcastError) {

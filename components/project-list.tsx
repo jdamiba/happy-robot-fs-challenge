@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, FolderOpen, Users, Calendar, Trash2 } from "lucide-react";
 import { formatTimestamp } from "@/lib/utils";
+import { Project } from "@/lib/types";
 
 export function ProjectList() {
   const { user } = useUser();
@@ -59,18 +60,18 @@ export function ProjectList() {
       } else {
         setError(response.error || "Failed to create project");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to create project");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectProject = (project: any) => {
+  const handleSelectProject = (project: Project) => {
     router.push(`/projects/${project.id}`);
   };
 
-  const handleDeleteProject = async (project: any, e: React.MouseEvent) => {
+  const handleDeleteProject = async (project: Project, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click event
 
     // Check if project has tasks
@@ -92,7 +93,7 @@ export function ProjectList() {
 
       if (response.success) {
         // Remove project from local state
-        setProjects(projects.filter((p: any) => p.id !== project.id));
+        setProjects(projects.filter((p: Project) => p.id !== project.id));
       } else {
         console.error("Failed to delete project:", response.error);
         setError(response.error || "Failed to delete project");

@@ -149,7 +149,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           operationId: generateOperationId(),
           timestamp: Date.now(),
         },
-        user?.id
+        user?.data?.id
       );
       console.log("Task update broadcast successful");
     } catch (broadcastError) {
@@ -239,7 +239,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const user = await getCurrentUser();
 
     // Broadcast task deletion to WebSocket clients
-    await websocketClient.broadcastTaskDelete(task.projectId, id, user?.id);
+    await websocketClient.broadcastTaskDelete(
+      task.projectId,
+      id,
+      user?.data?.id
+    );
 
     return NextResponse.json({
       success: true,

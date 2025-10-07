@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: happy-robot-postgres-test
+    restart: "no"
+    environment:
+      POSTGRES_DB: happyrobot_test
+      POSTGRES_USER: happyrobot_test
+      POSTGRES_PASSWORD: happyrobot_test123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U happyrobot_test -d happyrobot_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data
+
+volumes:
+  postgres_test_data:

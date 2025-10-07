@@ -165,16 +165,16 @@ export default function ApiDocsPage() {
                   <div className="mt-2 text-sm text-yellow-700">
                     <p>
                       Most API endpoints require authentication using Clerk JWT
-                      tokens. To test the API, you'll need to:
+                      tokens. To test the API, you&apos;ll need to:
                     </p>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Log in to the application to get a valid token</li>
                       <li>
-                        Copy the token from your browser's developer tools
+                        Copy the token from your browser&apos;s developer tools
                       </li>
                       <li>
-                        Click the "Authorize" button in Swagger UI and paste
-                        your token
+                        Click the &quot;Authorize&quot; button in Swagger UI and
+                        paste your token
                       </li>
                     </ul>
                   </div>

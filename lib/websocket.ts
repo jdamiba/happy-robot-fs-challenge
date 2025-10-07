@@ -1,5 +1,11 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { WebSocketMessage, TaskUpdate, CommentUpdate } from "./types";
+import {
+  WebSocketMessage,
+  TaskUpdate,
+  CommentUpdate,
+  ParsedTask,
+  Comment,
+} from "./types";
 import { generateOperationId } from "./utils";
 
 interface ClientConnection {
@@ -20,7 +26,7 @@ class WebSocketManager {
   }
 
   private setupWebSocketServer() {
-    this.wss.on("connection", (ws: WebSocket, request) => {
+    this.wss.on("connection", (ws: WebSocket) => {
       const clientId = generateOperationId();
       const client: ClientConnection = {
         ws,
@@ -34,7 +40,7 @@ class WebSocketManager {
         try {
           const message: WebSocketMessage = JSON.parse(data.toString());
           this.handleMessage(clientId, message);
-        } catch (error) {
+        } catch {
           this.sendError(clientId, "Invalid message format");
         }
       });
@@ -198,7 +204,7 @@ class WebSocketManager {
     this.broadcastToProject(projectId, message);
   }
 
-  public broadcastTaskCreate(projectId: string, task: any) {
+  public broadcastTaskCreate(projectId: string, task: ParsedTask) {
     const message: WebSocketMessage = {
       type: "TASK_CREATE",
       payload: task,
@@ -228,7 +234,7 @@ class WebSocketManager {
     this.broadcastToProject(projectId, message);
   }
 
-  public broadcastCommentCreate(projectId: string, comment: any) {
+  public broadcastCommentCreate(projectId: string, comment: Comment) {
     const message: WebSocketMessage = {
       type: "COMMENT_CREATE",
       payload: comment,

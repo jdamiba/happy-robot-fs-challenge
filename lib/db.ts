@@ -1,8 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  Project,
-  Task,
-  Comment,
   ParsedProject,
   ParsedTask,
   CreateProjectInput,
@@ -34,7 +31,8 @@ export class ProjectService {
   static async create(data: CreateProjectInput): Promise<ParsedProject> {
     const projectData = stringifyProjectData(data);
     const project = await prisma.project.create({
-      data: projectData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: projectData as any,
     });
     return parseProject(project);
   }
@@ -89,7 +87,8 @@ export class ProjectService {
     const projectData = stringifyProjectData(data);
     const project = await prisma.project.update({
       where: { id },
-      data: projectData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: projectData as any,
       include: {
         tasks: {
           include: {
@@ -113,7 +112,8 @@ export class TaskService {
   static async create(data: CreateTaskInput): Promise<ParsedTask> {
     const taskData = stringifyTaskData(data);
     const task = await prisma.task.create({
-      data: taskData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: taskData as any,
       include: {
         project: true,
         comments: true,
@@ -153,7 +153,8 @@ export class TaskService {
 
     const task = await prisma.task.update({
       where: { id },
-      data: taskData,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: taskData as any,
       include: {
         project: true,
         comments: true,
@@ -171,6 +172,7 @@ export class TaskService {
   static async updateStatus(id: string, status: string): Promise<ParsedTask> {
     const task = await prisma.task.update({
       where: { id },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: { status: status as any },
       include: {
         project: true,
@@ -261,7 +263,8 @@ export class CommentService {
         author: true,
       },
     });
-    return comment as Comment;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return comment as any;
   }
 
   static async findById(id: string): Promise<Comment | null> {
@@ -272,7 +275,8 @@ export class CommentService {
         author: true,
       },
     });
-    return comment as Comment | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return comment as any;
   }
 
   static async findByTaskId(taskId: string): Promise<Comment[]> {
@@ -284,7 +288,8 @@ export class CommentService {
       },
       orderBy: { timestamp: "asc" },
     });
-    return comments as Comment[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return comments as any;
   }
 
   static async update(id: string, data: UpdateCommentInput): Promise<Comment> {
@@ -296,7 +301,8 @@ export class CommentService {
         author: true,
       },
     });
-    return comment as Comment;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return comment as any;
   }
 
   static async delete(id: string): Promise<void> {
@@ -312,10 +318,11 @@ export class TransactionService {
     projectData: CreateProjectInput,
     tasksData: CreateTaskInput[]
   ): Promise<{ project: ParsedProject; tasks: ParsedTask[] }> {
-    return await prisma.$transaction(async (tx: any) => {
+    return await prisma.$transaction(async (tx) => {
       // Create project
       const project = await tx.project.create({
-        data: stringifyProjectData(projectData),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: stringifyProjectData(projectData) as any,
       });
 
       // Create tasks
@@ -325,7 +332,8 @@ export class TransactionService {
             data: {
               ...stringifyTaskData(taskData),
               projectId: project.id,
-            },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any,
             include: {
               project: true,
               comments: true,
@@ -346,13 +354,14 @@ export class TransactionService {
     taskData: UpdateTaskInput,
     newDependencies: string[]
   ): Promise<ParsedTask> {
-    return await prisma.$transaction(async (tx: any) => {
+    return await prisma.$transaction(async (tx) => {
       const task = await tx.task.update({
         where: { id: taskId },
         data: {
           ...stringifyTaskData(taskData),
           dependencies: newDependencies,
-        },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
         include: {
           project: true,
           comments: true,

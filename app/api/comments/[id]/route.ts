@@ -128,12 +128,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const comment = await CommentService.update(id, validatedData);
 
     // Get task to find project ID for broadcasting
-    const task = await TaskService.findById(comment.taskId);
+    // The comment should have taskId, but we need to handle the type properly
+    const taskId =
+      (comment as { taskId?: string; task?: { id: string } }).taskId ||
+      (comment as { taskId?: string; task?: { id: string } }).task?.id;
+    const task = taskId ? await TaskService.findById(taskId) : null;
     if (task) {
       // Broadcast comment update to WebSocket clients
       console.log("Broadcasting comment update:", {
-        commentId: comment.id,
-        taskId: comment.taskId,
+        commentId: (comment as unknown as { id: string }).id,
+        taskId: taskId,
         projectId: task.projectId,
         changes: validatedData,
       });
@@ -145,13 +149,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         await websocketClient.broadcastCommentUpdate(
           task.projectId,
           {
-            id: comment.id,
-            taskId: comment.taskId,
+            id: (comment as unknown as { id: string }).id,
+            taskId: (comment as unknown as { taskId: string }).taskId,
             changes: validatedData,
             operationId: generateOperationId(),
             timestamp: Date.now(),
           },
-          user?.id
+          user?.data?.id
         );
         console.log("Comment update broadcast successful");
       } catch (broadcastError) {
@@ -230,7 +234,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const comment = await CommentService.findById(id);
     console.log(
       "Comment found:",
-      comment ? { id: comment.id, taskId: comment.taskId } : null
+      comment
+        ? {
+            id: (comment as unknown as { id: string }).id,
+            taskId: (comment as unknown as { taskId: string }).taskId,
+          }
+        : null
     );
 
     if (!comment) {
@@ -247,12 +256,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     await CommentService.delete(id);
 
     // Get task to find project ID for broadcasting
-    const task = await TaskService.findById(comment.taskId);
+    const task = await TaskService.findById(
+      (comment as unknown as { taskId: string }).taskId
+    );
     if (task) {
       // Broadcast comment deletion to WebSocket clients
       console.log("Broadcasting comment deletion:", {
-        commentId: comment.id,
-        taskId: comment.taskId,
+        commentId: (comment as unknown as { id: string }).id,
+        taskId: (comment as unknown as { taskId: string }).taskId,
         projectId: task.projectId,
       });
 
@@ -262,8 +273,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
         await websocketClient.broadcastCommentDelete(
           task.projectId,
-          comment.id,
-          user?.id
+          (comment as unknown as { id: string }).id,
+          user?.data?.id
         );
         console.log("Comment deletion broadcast successful");
       } catch (broadcastError) {

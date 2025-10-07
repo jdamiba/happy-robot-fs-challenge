@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAppStore } from "@/lib/store";
 import { useWebSocket } from "@/lib/use-websocket";
@@ -19,14 +19,12 @@ import { Badge } from "@/components/ui/badge";
 import { ActiveUsers } from "./active-users";
 import {
   Plus,
-  ArrowLeft,
   CheckCircle,
   Circle,
   Clock,
   AlertCircle,
   MessageSquare,
-  User,
-  Calendar,
+  User as UserIcon,
   Tag,
 } from "lucide-react";
 import {
@@ -34,6 +32,7 @@ import {
   TaskStatus,
   Comment,
   TaskConfiguration,
+  User,
 } from "@/lib/types";
 
 // Helper function to safely access task configuration
@@ -96,7 +95,6 @@ export function TaskBoard() {
     loading,
     error,
     setTasks,
-    setCurrentProject,
     setLoading,
     setError,
     wsConnected,
@@ -110,7 +108,7 @@ export function TaskBoard() {
     timestamp: new Date().toISOString(),
   });
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Log user info being passed to WebSocket
   const userInfoForWebSocket = user
@@ -149,7 +147,7 @@ export function TaskBoard() {
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
-    priority: "MEDIUM" as const,
+    priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "URGENT",
     tags: [] as string[],
     dependencies: [] as string[],
   });
@@ -181,7 +179,7 @@ export function TaskBoard() {
 
       loadTasks();
     }
-  }, [currentProject?.id, setTasks]); // Only depend on stable values
+  }, [currentProject?.id, setTasks, currentProject]); // Only depend on stable values
 
   // Join project when WebSocket is connected and user is available
   useEffect(() => {
@@ -202,7 +200,8 @@ export function TaskBoard() {
     wsConnected,
     currentUser?.id,
     currentProject?.id,
-    // Removed joinProject and leaveProject from dependencies to prevent spam
+    joinProject,
+    leaveProject,
   ]);
 
   // Load current user's internal ID when component mounts
@@ -253,28 +252,10 @@ export function TaskBoard() {
       } else {
         setError(response.error || "Failed to create task");
       }
-    } catch (error) {
+    } catch {
       setError("Failed to create task");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUpdateTaskStatus = async (
-    taskId: string,
-    newStatus: TaskStatus
-  ) => {
-    try {
-      const response = await apiClient.updateTask(taskId, {
-        status: newStatus,
-      });
-      if (response.success && response.data) {
-        setTasks(
-          tasks.map((task) => (task.id === taskId ? response.data! : task))
-        );
-      }
-    } catch (error) {
-      setError("Failed to update task status");
     }
   };
 
@@ -441,7 +422,14 @@ export function TaskBoard() {
                   id="priority"
                   value={newTask.priority}
                   onChange={(e) =>
-                    setNewTask({ ...newTask, priority: e.target.value as any })
+                    setNewTask({
+                      ...newTask,
+                      priority: e.target.value as
+                        | "LOW"
+                        | "MEDIUM"
+                        | "HIGH"
+                        | "URGENT",
+                    })
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
@@ -630,7 +618,7 @@ export function TaskBoard() {
 
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <div className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                              <UserIcon className="h-3 w-3" />
                               <span>{task.assignedTo.length}</span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -768,21 +756,6 @@ function TaskDetailModal({
     }
 
     return true;
-  };
-
-  // Get dependency status for display
-  const getDependencyStatus = (task: ParsedTask) => {
-    if (task.dependencies.length === 0) return "ready";
-
-    const depTasks = task.dependencies
-      .map((depId) => tasks.find((t) => t.id === depId))
-      .filter(Boolean);
-
-    const completedDeps = depTasks.filter((dep) => dep?.status === "DONE");
-
-    if (completedDeps.length === depTasks.length) return "ready";
-    if (completedDeps.length === 0) return "blocked";
-    return "partial";
   };
 
   const handleSave = async () => {
@@ -1208,15 +1181,7 @@ function CommentsSection({
   onCommentUpdate: (updatedTask: ParsedTask) => void;
   onCommentDelete: (updatedTask: ParsedTask) => void;
 }) {
-  const { user } = useUser();
-  const {
-    wsConnected,
-    handleCommentCreate,
-    handleCommentUpdate,
-    handleCommentDelete,
-    comments: storeComments,
-    setComments,
-  } = useAppStore();
+  const { wsConnected, comments: storeComments, setComments } = useAppStore();
 
   // Use comments from the store for real-time updates, fallback to prop
   const currentComments = storeComments[task.id] || comments;
@@ -1224,7 +1189,7 @@ function CommentsSection({
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
 
   // Load current user's internal ID when component mounts
@@ -1242,17 +1207,7 @@ function CommentsSection({
     loadCurrentUser();
   }, []);
 
-  // Load comments when component mounts
-  useEffect(() => {
-    if (task.id) {
-      loadComments();
-    }
-  }, [task.id]);
-
-  // This effect handles real-time updates from other users via WebSocket
-  // The modal will automatically update when the task prop changes
-
-  const loadComments = async () => {
+  const loadComments = useCallback(async () => {
     try {
       const response = await apiClient.getComments(task.id);
       if (response.success && response.data) {
@@ -1266,7 +1221,17 @@ function CommentsSection({
     } catch (error) {
       console.error("Failed to load comments:", error);
     }
-  };
+  }, [setComments, task, onCommentAdd]);
+
+  // Load comments when component mounts
+  useEffect(() => {
+    if (task.id) {
+      loadComments();
+    }
+  }, [task.id, loadComments]);
+
+  // This effect handles real-time updates from other users via WebSocket
+  // The modal will automatically update when the task prop changes
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();

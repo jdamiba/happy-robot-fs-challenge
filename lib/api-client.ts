@@ -2,6 +2,7 @@ import {
   ParsedProject,
   ParsedTask,
   Comment,
+  User,
   CreateProjectInput,
   UpdateProjectInput,
   CreateTaskInput,
@@ -50,8 +51,8 @@ class ApiClient {
   }
 
   // User operations
-  async getCurrentUser(): Promise<ApiResponse<any>> {
-    return this.request<any>("/user/current");
+  async getCurrentUser(): Promise<ApiResponse<User>> {
+    return this.request<User>("/user/current");
   }
 
   // Project operations

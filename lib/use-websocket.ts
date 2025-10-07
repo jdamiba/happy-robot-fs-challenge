@@ -66,6 +66,64 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     handleUserPresence,
   } = useAppStore();
 
+  const sendMessage = useCallback(
+    (message: WebSocketMessage) => {
+      console.log("sendMessage called:", {
+        message,
+        readyState: wsRef.current?.readyState,
+        isOpen: wsRef.current?.readyState === WebSocket.OPEN,
+        connected: wsConnected,
+      });
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify(message));
+        console.log("Message sent successfully:", message);
+      } else {
+        console.warn("WebSocket is not connected. Cannot send message:", {
+          message,
+          readyState: wsRef.current?.readyState,
+          wsConnected,
+        });
+      }
+    },
+    [wsConnected]
+  );
+
+  const setUser = useCallback(
+    (userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => {
+      // Only send SET_USER once per session
+      if (userSetRef.current) {
+        console.log("🔧 setUser called but already set, skipping:", {
+          userId,
+          userInfo,
+          hasUserInfo: !!userInfo,
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      console.log("🔧 setUser called with:", {
+        userId,
+        userInfo,
+        hasUserInfo: !!userInfo,
+        userInfoKeys: userInfo ? Object.keys(userInfo) : [],
+        timestamp: new Date().toISOString(),
+      });
+
+      userSetRef.current = true;
+      sendMessage({
+        type: "SET_USER",
+        payload: { userId, userInfo },
+        operationId: `set-user-${Date.now()}`,
+        timestamp: Date.now(),
+      });
+    },
+    [sendMessage]
+  );
+
+  // Store setUser in ref so it can be accessed in connect function
+  setUserRef.current = setUser;
+
   const connect = useCallback(() => {
     if (
       !isClient || // Don't connect during SSR
@@ -243,6 +301,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     handleTaskDelete,
     handleCommentUpdate,
     handleCommentCreate,
+    handleCommentDelete,
+    handleUserPresence,
+    isClient,
+    setUser,
+    userId,
+    userInfo,
   ]);
 
   const disconnect = useCallback(() => {
@@ -263,61 +327,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     setWsConnected(false);
     isConnectingRef.current = false;
   }, [setWsConnected]);
-
-  const sendMessage = useCallback(
-    (message: WebSocketMessage) => {
-      console.log("sendMessage called:", {
-        message,
-        readyState: wsRef.current?.readyState,
-        isOpen: wsRef.current?.readyState === WebSocket.OPEN,
-        connected: wsConnected,
-      });
-
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify(message));
-        console.log("Message sent successfully:", message);
-      } else {
-        console.warn("WebSocket is not connected. Cannot send message:", {
-          message,
-          readyState: wsRef.current?.readyState,
-          wsConnected,
-        });
-      }
-    },
-    [wsConnected]
-  );
-
-  const setUser = useCallback(
-    (userId: string, userInfo?: UseWebSocketOptions["userInfo"]) => {
-      // Only send SET_USER once per session
-      if (userSetRef.current) {
-        console.log("🔧 setUser called but already set, skipping:", {
-          userId,
-          userInfo,
-          hasUserInfo: !!userInfo,
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-
-      console.log("🔧 setUser called with:", {
-        userId,
-        userInfo,
-        hasUserInfo: !!userInfo,
-        userInfoKeys: userInfo ? Object.keys(userInfo) : [],
-        timestamp: new Date().toISOString(),
-      });
-
-      userSetRef.current = true;
-      sendMessage({
-        type: "SET_USER",
-        payload: { userId, userInfo },
-        operationId: `set-user-${Date.now()}`,
-        timestamp: Date.now(),
-      });
-    },
-    [sendMessage]
-  );
 
   const joinProject = useCallback(
     (projectId: string, userId?: string) => {
@@ -400,9 +409,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     [sendMessage]
   );
 
-  // Store setUser in ref so it can be accessed in connect function
-  setUserRef.current = setUser;
-
   // Call setUser when userId changes after WebSocket is connected
   // Only send SET_USER once per session to avoid spam
   useEffect(() => {
@@ -424,7 +430,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       });
       setUser(userId, userInfo);
     }
-  }, [userId, userInfo, wsConnected]);
+  }, [userId, userInfo, wsConnected, setUser]);
 
   // Connect on mount with a small delay to ensure page is ready
   useEffect(() => {

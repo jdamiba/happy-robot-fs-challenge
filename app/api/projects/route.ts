@@ -44,7 +44,7 @@ export async function GET() {
       );
     }
 
-    const projects = await ProjectService.findByOwnerId(user.id);
+    const projects = await ProjectService.findByOwnerId(user.data!.id);
     return NextResponse.json({
       success: true,
       data: projects,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = CreateProjectSchema.parse({
       ...body,
-      ownerId: user.id, // Use our internal user ID
+      ownerId: user.data?.id, // Use our internal user ID
     });
 
     // Generate a unique ID for the project

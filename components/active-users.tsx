@@ -23,7 +23,7 @@ export function ActiveUsers() {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="flex flex-wrap gap-2">
-          {activeUsers.map((user, index) => (
+          {activeUsers.map((user) => (
             <ActiveUserBadge key={user.userId} user={user} />
           ))}
         </div>

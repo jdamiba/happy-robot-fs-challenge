@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Verify user owns the project
     const project = await ProjectService.findById(id);
-    if (!project || project.ownerId !== user.id) {
+    if (!project || project.ownerId !== user.data?.id) {
       return NextResponse.json(
         { success: false, error: "Project not found or access denied" },
         { status: 404 }

@@ -1,37 +1,34 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import {
-  Task,
-  Project,
-  Comment,
-  ParsedTask,
-  ParsedProject,
-  TaskConfiguration,
-} from "./types";
+import { ParsedTask, ParsedProject } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 // With PostgreSQL, JSON fields are handled natively, so no parsing needed
-export function parseTask(task: any): ParsedTask {
+export function parseTask(task: unknown): ParsedTask {
+  const taskData = task as ParsedTask;
   return {
-    ...task,
-    configuration: task.configuration ?? undefined,
+    ...taskData,
+    configuration: taskData.configuration ?? null,
   };
 }
 
-export function parseProject(project: any): ParsedProject {
+export function parseProject(project: unknown): ParsedProject {
+  const projectData = project as ParsedProject;
   return {
-    ...project,
-    description: project.description ?? undefined,
-    metadata: project.metadata ?? undefined,
+    ...projectData,
+    description: projectData.description ?? undefined,
+    metadata: projectData.metadata ?? undefined,
   };
 }
 
 // Type conversion functions for Prisma operations
-export function stringifyTaskData(data: Partial<ParsedTask>): any {
-  const { project, assignees, comments, ...taskData } = data;
+export function stringifyTaskData(
+  data: Partial<ParsedTask>
+): Record<string, unknown> {
+  const { ...taskData } = data;
 
   // Ensure required fields are present
   if (!taskData.id) {
@@ -47,8 +44,10 @@ export function stringifyTaskData(data: Partial<ParsedTask>): any {
   return taskData;
 }
 
-export function stringifyProjectData(data: Partial<ParsedProject>): any {
-  const { owner, tasks, ...projectData } = data;
+export function stringifyProjectData(
+  data: Partial<ParsedProject>
+): Record<string, unknown> {
+  const { ...projectData } = data;
 
   // Ensure required fields are present
   if (!projectData.id) {
@@ -178,7 +177,7 @@ export function getStatusColor(status: string): string {
 }
 
 // Debounce utility for real-time updates
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -190,7 +189,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle utility for rate limiting
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
