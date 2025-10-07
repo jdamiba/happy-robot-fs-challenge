@@ -86,6 +86,218 @@ The comprehensive guide includes:
 4. **User Management**: Clerk webhooks sync user data to PostgreSQL database
 5. **Real-time Updates**: WebSocket server handles live collaboration features
 
+## 🔄 Data Synchronization & Real-time Strategy
+
+### WebSocket Message Flow
+
+```
+User Action → API Route → Database → WebSocket Broadcast → All Connected Clients
+```
+
+1. **Optimistic Updates**: UI updates immediately for instant feedback
+2. **Server Validation**: API routes validate and persist changes to database
+3. **WebSocket Broadcast**: Changes broadcast to all clients in the project room
+4. **Conflict Resolution**: Last-write-wins with timestamp-based ordering
+5. **Rollback Capability**: Failed operations automatically revert UI changes
+
+### Synchronization Features
+
+- **Project Rooms**: Users join/leave project-specific WebSocket rooms
+- **User Presence**: Track active users per project with client IDs
+- **Message Filtering**: Clients ignore their own broadcasted messages
+- **Connection Resilience**: Auto-reconnection with exponential backoff
+- **Rate Limiting**: Prevent API request storms with request throttling
+
+## 📈 Scaling Strategy
+
+### Current Architecture (Single Instance)
+
+**Strengths**:
+- Simple deployment and maintenance
+- Low latency for small teams
+- Easy debugging and monitoring
+
+**Limitations**:
+- Single point of failure for WebSocket connections
+- Memory usage grows with connected users
+- No horizontal scaling capability
+
+### Future Scaling Approaches
+
+#### Phase 1: Connection Optimization
+- **Connection Pooling**: Limit concurrent WebSocket connections per user
+- **Message Batching**: Batch multiple updates into single broadcasts
+- **Memory Management**: Implement connection cleanup for idle users
+
+#### Phase 2: Horizontal Scaling
+- **Load Balancer**: Distribute WebSocket connections across multiple servers
+- **Redis Pub/Sub**: Share state across WebSocket server instances
+- **Sticky Sessions**: Route users to same server instance for session persistence
+
+#### Phase 3: Advanced Scaling
+- **Microservices**: Split WebSocket server into specialized services
+- **Message Queues**: Use Redis Streams or Apache Kafka for reliable messaging
+- **Database Sharding**: Partition data by project or user for better performance
+
+### Scaling Implementation Plan
+
+```typescript
+// Future Redis integration example
+const redis = new Redis(process.env.REDIS_URL);
+
+// Publish to all server instances
+await redis.publish('project:123', JSON.stringify({
+  type: 'TASK_UPDATE',
+  payload: taskUpdate,
+  timestamp: Date.now()
+}));
+```
+
+## ⚖️ Technology Choices & Tradeoffs
+
+### Frontend: Next.js 15
+
+**✅ Chosen Because**:
+- **App Router**: Modern routing with server components
+- **TypeScript**: Strong typing for large codebases
+- **API Routes**: Built-in backend functionality
+- **Performance**: Automatic code splitting and optimization
+
+**❌ Tradeoffs**:
+- **Learning Curve**: App Router has different patterns than Pages Router
+- **Bundle Size**: Larger initial bundle compared to vanilla React
+- **Flexibility**: Less control over build process vs. custom webpack setup
+
+### Authentication: Clerk
+
+**✅ Chosen Because**:
+- **Rapid Development**: Pre-built auth UI and flows
+- **Security**: Industry-standard JWT handling and security practices
+- **Webhooks**: Built-in user lifecycle management
+- **Multi-provider**: Support for email, OAuth, and social login
+
+**❌ Tradeoffs**:
+- **Vendor Lock-in**: Dependent on Clerk's pricing and feature roadmap
+- **Customization**: Limited control over auth UI styling and behavior
+- **Cost**: Can become expensive at scale vs. self-hosted solutions
+
+### Database: PostgreSQL + Prisma
+
+**✅ Chosen Because**:
+- **Reliability**: ACID compliance and robust data integrity
+- **Type Safety**: Prisma generates TypeScript types from schema
+- **Migrations**: Version-controlled database schema changes
+- **Performance**: Excellent query optimization and indexing
+
+**❌ Tradeoffs**:
+- **Complexity**: More setup than SQLite for development
+- **Learning Curve**: Prisma ORM patterns vs. raw SQL
+- **Cost**: Managed PostgreSQL services cost more than file-based databases
+
+### Real-time: Custom WebSocket Server
+
+**✅ Chosen Because**:
+- **Control**: Full control over message routing and business logic
+- **Performance**: Low latency for real-time updates
+- **Customization**: Project-specific rooms and user presence
+- **Cost**: No per-message pricing like hosted solutions
+
+**❌ Tradeoffs**:
+- **Maintenance**: Need to handle connection management and scaling
+- **Reliability**: More complex than using hosted services like Pusher
+- **Development Time**: Custom implementation vs. plug-and-play solutions
+
+### Deployment: Render.com
+
+**✅ Chosen Because**:
+- **Simplicity**: Easy deployment from GitHub
+- **Free Tier**: Good for development and small projects
+- **Auto-scaling**: Automatic scaling based on traffic
+- **Built-in Monitoring**: Health checks and logging
+
+**❌ Tradeoffs**:
+- **Sleep Mode**: Free services sleep after inactivity
+- **Cold Starts**: 30-second wake-up time for sleeping services
+- **Vendor Lock-in**: Platform-specific deployment configuration
+
+## 🔄 Data Flow & State Management
+
+### Client-Side State (Zustand)
+
+```typescript
+// Optimistic updates with rollback capability
+const updateTaskOptimistic = (taskId: string, updates: Partial<Task>) => {
+  // 1. Update UI immediately
+  setTasks(tasks.map(t => t.id === taskId ? { ...t, ...updates } : t));
+  
+  // 2. Send to server
+  apiClient.updateTask(taskId, updates)
+    .then(response => {
+      // 3. Confirm update or rollback on failure
+      if (!response.success) {
+        rollbackOperation(taskId, originalTask);
+      }
+    });
+};
+```
+
+### Server-Side Flow
+
+```typescript
+// API Route → Database → WebSocket Broadcast
+export async function PUT(request: Request) {
+  // 1. Validate and update database
+  const updatedTask = await prisma.task.update({
+    where: { id: taskId },
+    data: updates
+  });
+  
+  // 2. Broadcast to WebSocket server
+  await fetch(`${WEBSOCKET_SERVER_URL}/broadcast`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'TASK_UPDATE',
+      projectId: updatedTask.projectId,
+      payload: updatedTask
+    })
+  });
+  
+  return Response.json({ success: true, data: updatedTask });
+}
+```
+
+### WebSocket Message Processing
+
+```typescript
+// WebSocket server message handling
+ws.on('message', (data) => {
+  const message = JSON.parse(data.toString());
+  
+  // Route to project room
+  const projectRoom = `project:${message.projectId}`;
+  
+  // Broadcast to all clients in room (except sender)
+  wss.clients.forEach(client => {
+    if (client.room === projectRoom && client !== ws) {
+      client.send(JSON.stringify(message));
+    }
+  });
+});
+```
+
+### Conflict Resolution Strategy
+
+**Current Approach: Last-Write-Wins**
+- Timestamp-based conflict resolution
+- Client timestamps for optimistic updates
+- Server timestamps for authoritative ordering
+
+**Future Improvements**:
+- Operational Transformation for text editing
+- CRDTs (Conflict-free Replicated Data Types) for complex conflicts
+- User-aware conflict resolution with merge strategies
+
 ## ✨ Key Features
 
 - ✅ **Real-time collaboration** - See changes instantly across all clients
