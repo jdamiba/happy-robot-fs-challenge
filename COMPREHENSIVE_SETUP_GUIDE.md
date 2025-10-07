@@ -220,7 +220,12 @@ npx prisma studio
 
 ### 1. Main Application (.env.local)
 
-Create `.env.local` in the project root:
+```bash
+# Copy the template file
+cp env.example .env.local
+```
+
+Then edit `.env.local` with your actual values:
 
 ```env
 # Clerk Authentication (Required)
@@ -247,7 +252,12 @@ CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 
 ### 2. WebSocket Server (.env)
 
-Create `.env` in the `websocket-server` directory:
+```bash
+# Copy the template file
+cp websocket-server/env.example websocket-server/.env
+```
+
+Then edit `websocket-server/.env` with your actual values:
 
 ```env
 # WebSocket Server Configuration

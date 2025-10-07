@@ -13,8 +13,9 @@ cd happy-robot
 npm install && cd websocket-server && npm install && cd ..
 
 # Set up environment variables (see comprehensive guide)
-cp env.production .env.local
-# Edit .env.local with your Clerk keys and database URL
+cp env.example .env.local
+cp websocket-server/env.example websocket-server/.env
+# Edit .env.local and websocket-server/.env with your actual values
 
 # Start database (Docker)
 cd database && docker-compose up -d && cd ..
