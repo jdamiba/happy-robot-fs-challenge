@@ -122,12 +122,7 @@ export function TaskBoard() {
           email: user.primaryEmailAddress?.emailAddress || undefined,
         }
       : undefined;
-  }, [
-    user?.fullName,
-    user?.firstName,
-    user?.lastName,
-    user?.primaryEmailAddress?.emailAddress,
-  ]);
+  }, [user]);
 
   console.log("🔍 TaskBoard - User info for WebSocket:", {
     user,
@@ -184,16 +179,35 @@ export function TaskBoard() {
         }
       }
     }
-  }, [tasks, selectedTask?.id]); // Only depend on the ID, not the entire object
+  }, [tasks, selectedTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const lastTasksRequestTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (currentProject) {
+      const now = Date.now();
+      const timeSinceLastRequest = now - lastTasksRequestTimeRef.current;
+
+      // Prevent requests that are too close together (within 2 seconds)
+      if (timeSinceLastRequest < 2000) {
+        console.log("Tasks request too soon after last request, skipping");
+        return;
+      }
+
+      lastTasksRequestTimeRef.current = now;
+
       // Load tasks using API client directly
       const loadTasks = async () => {
         try {
+          console.log("Loading tasks for project:", currentProject.id);
           const response = await apiClient.getTasks(currentProject.id);
           if (response.success) {
             setTasks(response.data || []);
+            console.log("Tasks loaded successfully:", {
+              projectId: currentProject.id,
+              taskCount: response.data?.length || 0,
+              timestamp: new Date().toISOString(),
+            });
           }
         } catch (error) {
           console.error("Failed to load tasks:", error);
@@ -202,7 +216,7 @@ export function TaskBoard() {
 
       loadTasks();
     }
-  }, [currentProject?.id, setTasks]); // Only depend on stable values
+  }, [currentProject?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Join project when WebSocket is connected and user is available
   useEffect(() => {
@@ -302,6 +316,15 @@ export function TaskBoard() {
       console.error("Failed to update local state after task deletion:", error);
     }
   };
+
+  const handleTaskUpdate = useCallback(
+    (updatedTask: ParsedTask) => {
+      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+      // Update the selected task to reflect changes immediately
+      setSelectedTask(updatedTask);
+    },
+    [tasks, setTasks]
+  );
 
   const getTasksByStatus = (status: TaskStatus) => {
     return tasks.filter((task) => task.status === status);
@@ -665,13 +688,7 @@ export function TaskBoard() {
           task={selectedTask}
           tasks={tasks}
           onClose={() => setSelectedTask(null)}
-          onUpdate={(updatedTask) => {
-            setTasks(
-              tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-            );
-            // Update the selected task to reflect changes immediately
-            setSelectedTask(updatedTask);
-          }}
+          onUpdate={handleTaskUpdate}
           onDelete={handleDeleteTask}
         />
       )}
@@ -696,6 +713,10 @@ function TaskDetailModal({
   const [editedTask, setEditedTask] = useState(task);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  // Use refs to track previous values to avoid dependency issues
+  const prevTaskRef = useRef(task);
+  const isInitialMount = useRef(true);
+
   // Update editedTask when task prop changes, but avoid cycling
   useEffect(() => {
     console.log("🔄 TaskDetailModal task prop changed:", {
@@ -705,33 +726,35 @@ function TaskDetailModal({
       timestamp: new Date().toISOString(),
     });
 
+    // Skip on initial mount to avoid unnecessary updates
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      prevTaskRef.current = task;
+      return;
+    }
+
     // Only update if we're not currently editing and the task has actually changed
     if (!isEditing) {
+      const prevTask = prevTaskRef.current;
       const hasSignificantChanges =
-        task.status !== editedTask.status ||
-        task.title !== editedTask.title ||
+        task.status !== prevTask.status ||
+        task.title !== prevTask.title ||
         JSON.stringify(task.configuration) !==
-          JSON.stringify(editedTask.configuration);
+          JSON.stringify(prevTask.configuration);
 
       if (hasSignificantChanges) {
         console.log("📝 Updating editedTask with new task data:", {
           taskId: task.id,
-          oldStatus: editedTask.status,
+          oldStatus: prevTask.status,
           newStatus: task.status,
         });
         setEditedTask(task);
       }
     }
-  }, [
-    task.id,
-    task.title,
-    task.status,
-    task.configuration,
-    isEditing,
-    editedTask.status,
-    editedTask.title,
-    editedTask.configuration,
-  ]);
+
+    // Update the ref with the current task
+    prevTaskRef.current = task;
+  }, [task.id, task.title, task.status, task.configuration, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle click outside to close
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -784,7 +807,7 @@ function TaskDetailModal({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "unset";
     };
-  }, [onClose, isEditing, task, editedTask]);
+  }, [onClose, isEditing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check if task can transition to a given status based on dependencies
   const canTransitionToStatus = (taskId: string, newStatus: TaskStatus) => {
@@ -889,13 +912,12 @@ function TaskDetailModal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+      className="fixed inset-0 bg-white flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
       onClick={handleBackdropClick}
     >
-      <div className="absolute inset-0 backdrop-blur-sm"></div>
       <Card
         ref={modalRef}
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border-0 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border animate-in zoom-in-95 duration-200 bg-white"
       >
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -905,7 +927,11 @@ function TaskDetailModal({
             <div className="flex gap-2">
               {isEditing ? (
                 <>
-                  <Button size="sm" onClick={handleSave}>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                  >
                     Save
                   </Button>
                   <Button
@@ -1239,6 +1265,8 @@ function CommentsSection({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [commentError, setCommentError] = useState<string | null>(null);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const lastRequestTimeRef = useRef<number>(0);
 
   // Load current user's internal ID when component mounts
   useEffect(() => {
@@ -1256,20 +1284,43 @@ function CommentsSection({
   }, []);
 
   const loadComments = useCallback(async () => {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+
+    // Prevent multiple simultaneous requests
+    if (isLoadingComments) {
+      console.log("Comments already loading, skipping request");
+      return;
+    }
+
+    // Prevent requests that are too close together (within 1 second)
+    if (timeSinceLastRequest < 1000) {
+      console.log("Request too soon after last request, skipping");
+      return;
+    }
+
+    lastRequestTimeRef.current = now;
+    setIsLoadingComments(true);
+
     try {
+      console.log("Loading comments for task:", task.id);
       const response = await apiClient.getComments(task.id);
       if (response.success && response.data) {
         // Store comments in Zustand store for real-time updates
         setComments(task.id, response.data);
 
-        // Also update the task prop for backward compatibility
-        const updatedTask = { ...task, comments: response.data };
-        onCommentAdd(updatedTask);
+        console.log("Comments loaded successfully:", {
+          taskId: task.id,
+          commentCount: response.data.length,
+          timestamp: new Date().toISOString(),
+        });
       }
     } catch (error) {
       console.error("Failed to load comments:", error);
+    } finally {
+      setIsLoadingComments(false);
     }
-  }, [setComments, task.id, onCommentAdd]);
+  }, [setComments, task.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load comments when component mounts
   useEffect(() => {

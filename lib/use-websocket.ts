@@ -69,7 +69,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         });
       }
     },
-    [wsConnected, userId]
+    [wsConnected]
   );
 
   const setUser = useCallback(
@@ -154,7 +154,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         });
       }
     },
-    [sendMessage, setUser]
+    [sendMessage, userId, wsConnected]
   );
 
   const leaveProject = useCallback(
@@ -293,6 +293,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             wsRef.current.onmessage = (event) => {
               try {
                 const message = JSON.parse(event.data);
+
+                // Skip messages from the current user to prevent processing our own updates
+                if (message.userId === userId) {
+                  console.log("Ignoring message from self:", {
+                    type: message.type,
+                    userId: message.userId,
+                    currentUserId: userId,
+                    timestamp: new Date().toISOString(),
+                  });
+                  return;
+                }
+
                 // Use the current values from the store
                 addWsMessage(message);
 
@@ -349,7 +361,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setWsConnected(false);
       isConnectingRef.current = false;
     };
-  }, [isClient]); // Only depend on isClient to run once
+  }, [isClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
   useEffect(() => {

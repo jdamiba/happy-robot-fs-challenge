@@ -695,8 +695,27 @@ export const useAppStore = create<AppState>()(
             state.currentProject &&
             presence.projectId === state.currentProject.id
           ) {
+            // Deduplicate users by clientId to prevent duplicate keys
+            const uniqueUsers = presence.activeUsers.reduce((acc, user) => {
+              // Use clientId as the unique key since it's guaranteed to be unique per connection
+              const key = user.clientId;
+              if (!acc.find((u) => u.clientId === key)) {
+                acc.push(user);
+              }
+              return acc;
+            }, [] as typeof presence.activeUsers);
+
+            console.log("Deduplicated active users:", {
+              original: presence.activeUsers.length,
+              deduplicated: uniqueUsers.length,
+              users: uniqueUsers.map((u) => ({
+                userId: u.userId,
+                clientId: u.clientId,
+              })),
+            });
+
             return {
-              activeUsers: presence.activeUsers,
+              activeUsers: uniqueUsers,
             };
           }
           return state;
