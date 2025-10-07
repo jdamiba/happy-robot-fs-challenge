@@ -11,6 +11,39 @@ interface RouteParams {
   }>;
 }
 
+/**
+ * @swagger
+ * /api/projects/{id}/tasks:
+ *   get:
+ *     summary: Get all tasks for a project
+ *     description: Retrieve all tasks belonging to a specific project
+ *     tags: [Tasks]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Project ID
+ *         example: "project_123456789"
+ *     responses:
+ *       200:
+ *         description: List of project tasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Task'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -32,6 +65,61 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * @swagger
+ * /api/projects/{id}/tasks:
+ *   post:
+ *     summary: Create a new task in a project
+ *     description: Create a new task within a specific project. The task creation is broadcast to all connected clients in real-time.
+ *     tags: [Tasks]
+ *     security:
+ *       - ClerkAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Project ID
+ *         example: "project_123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateTaskRequest'
+ *     responses:
+ *       200:
+ *         description: Task created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Task'
+ *                 operationId:
+ *                   type: string
+ *                   example: "op_123456789"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       404:
+ *         description: Project not found or access denied
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *             example:
+ *               success: false
+ *               error: "Project not found or access denied"
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;

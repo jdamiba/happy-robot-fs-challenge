@@ -5,6 +5,35 @@ import { websocketClient } from "@/lib/websocket-client";
 import { generateOperationId } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/auth-utils";
 
+/**
+ * @swagger
+ * /api/projects:
+ *   get:
+ *     summary: Get all projects for the current user
+ *     description: Retrieve all projects owned by the authenticated user
+ *     tags: [Projects]
+ *     security:
+ *       - ClerkAuth: []
+ *     responses:
+ *       200:
+ *         description: List of user's projects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Project'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -32,6 +61,44 @@ export async function GET() {
   }
 }
 
+/**
+ * @swagger
+ * /api/projects:
+ *   post:
+ *     summary: Create a new project
+ *     description: Create a new project for the authenticated user
+ *     tags: [Projects]
+ *     security:
+ *       - ClerkAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateProjectRequest'
+ *     responses:
+ *       200:
+ *         description: Project created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Project'
+ *                 operationId:
+ *                   type: string
+ *                   example: "op_123456789"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();

@@ -1,6 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth-utils";
 
+/**
+ * @swagger
+ * /api/user/current:
+ *   get:
+ *     summary: Get current user information
+ *     description: Retrieve information about the currently authenticated user
+ *     tags: [Authentication]
+ *     security:
+ *       - ClerkAuth: []
+ *     responses:
+ *       200:
+ *         description: Current user information
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       description: Internal user ID
+ *                       example: "user_123456789"
+ *                     clerkId:
+ *                       type: string
+ *                       description: Clerk user ID
+ *                       example: "user_2abc123def456"
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                       example: "john.doe@example.com"
+ *                     firstName:
+ *                       type: string
+ *                       example: "John"
+ *                     lastName:
+ *                       type: string
+ *                       example: "Doe"
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();

@@ -1225,6 +1225,7 @@ function CommentsSection({
   const [editingText, setEditingText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   // Load current user's internal ID when component mounts
   useEffect(() => {
@@ -1272,14 +1273,25 @@ function CommentsSection({
     if (!newComment.trim() || !currentUser || isSubmitting) return;
 
     setIsSubmitting(true);
+    setCommentError(null);
+
     try {
+      console.log("Creating comment:", {
+        taskId: task.id,
+        content: newComment.trim(),
+        currentUser: currentUser?.id,
+      });
+
       const response = await apiClient.createComment({
         taskId: task.id,
         content: newComment.trim(),
         // authorId will be set by the API route using getCurrentUser()
       });
 
+      console.log("Comment creation response:", response);
+
       if (response.success && response.data) {
+        console.log("Comment created successfully:", response.data.id);
         const updatedTask = {
           ...task,
           comments: [response.data, ...currentComments],
@@ -1287,10 +1299,15 @@ function CommentsSection({
         onCommentAdd(updatedTask);
         setNewComment("");
       } else {
-        console.error("Failed to create comment:", response.error);
+        const errorMsg = response.error || "Failed to create comment";
+        console.error("Failed to create comment:", errorMsg);
+        setCommentError(errorMsg);
       }
     } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to create comment";
       console.error("Failed to create comment:", error);
+      setCommentError(errorMsg);
     } finally {
       setIsSubmitting(false);
     }
@@ -1327,19 +1344,68 @@ function CommentsSection({
     if (!confirmed) return;
 
     try {
+      console.log("Deleting comment:", commentId);
+
+      // Check if comment exists in our local state
+      const commentExists = currentComments.some(
+        (comment) => comment.id === commentId
+      );
+      if (!commentExists) {
+        console.warn("Comment not found in local state:", commentId);
+        // Remove it from local state anyway to clean up
+        const updatedComments = currentComments.filter(
+          (comment) => comment.id !== commentId
+        );
+        const updatedTask = { ...task, comments: updatedComments };
+        onCommentDelete(updatedTask);
+        return;
+      }
+
       const response = await apiClient.deleteComment(commentId);
+      console.log("Delete comment response:", response);
 
       if (response.success) {
+        console.log("Comment deleted successfully");
         const updatedComments = currentComments.filter(
           (comment) => comment.id !== commentId
         );
         const updatedTask = { ...task, comments: updatedComments };
         onCommentDelete(updatedTask);
       } else {
-        console.error("Failed to delete comment:", response.error);
+        const errorMsg = response.error || "Failed to delete comment";
+        console.error("Failed to delete comment:", errorMsg);
+
+        // If it's a 404 error, the comment doesn't exist in the database
+        // Remove it from local state to clean up
+        if (errorMsg.includes("not found") || errorMsg.includes("404")) {
+          console.log(
+            "Comment not found in database, removing from local state"
+          );
+          const updatedComments = currentComments.filter(
+            (comment) => comment.id !== commentId
+          );
+          const updatedTask = { ...task, comments: updatedComments };
+          onCommentDelete(updatedTask);
+        } else {
+          alert(`Failed to delete comment: ${errorMsg}`);
+        }
       }
     } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : "Failed to delete comment";
       console.error("Failed to delete comment:", error);
+
+      // If it's a 404 error, remove from local state
+      if (errorMsg.includes("not found") || errorMsg.includes("404")) {
+        console.log("Comment not found in database, removing from local state");
+        const updatedComments = currentComments.filter(
+          (comment) => comment.id !== commentId
+        );
+        const updatedTask = { ...task, comments: updatedComments };
+        onCommentDelete(updatedTask);
+      } else {
+        alert(`Failed to delete comment: ${errorMsg}`);
+      }
     }
   };
 
@@ -1379,6 +1445,11 @@ function CommentsSection({
               {isSubmitting ? "Posting..." : "Post"}
             </Button>
           </div>
+          {commentError && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+              Error: {commentError}
+            </div>
+          )}
         </form>
       )}
 

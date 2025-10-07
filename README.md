@@ -29,9 +29,17 @@ cd websocket-server && npm install && cd ..
 cp env.example .env
 cp websocket-server/env.example websocket-server/.env
 
-# Set up database
+# Set up database (choose one option)
+
+# Option A: Using Docker (Recommended)
+cd database && docker-compose up -d && cd ..
+
+# Option B: Using local PostgreSQL
+export DATABASE_URL="postgresql://username:password@localhost:5432/happyrobot"
+cd database && ./setup.sh && cd ..
+
+# Generate Prisma client
 npx prisma generate
-npx prisma db push
 
 # Start WebSocket server (Terminal 1)
 cd websocket-server && npm start
@@ -45,7 +53,7 @@ npm run dev
 ```
 ┌─────────────────┐    HTTP API    ┌─────────────────┐
 │   Next.js App   │◄─────────────►│   Database      │
-│   (Frontend)    │                │   (SQLite)      │
+│   (Frontend)    │                │   (PostgreSQL)  │
 └─────────────────┘                └─────────────────┘
          │                                   │
          │ WebSocket                         │
@@ -90,9 +98,13 @@ happy-robot/
 │   ├── test-client.js            # Test client
 │   ├── load-test.yml             # Load testing config
 │   └── package.json              # Server dependencies
+├── database/                     # Database setup and migrations
+│   ├── migrations/               # SQL migration files
+│   ├── docker-compose.yml        # Docker database setup
+│   ├── setup.sh                  # Database setup script
+│   └── verify.js                 # Database verification
 ├── prisma/                       # Database schema
-│   ├── schema.prisma             # Prisma schema
-│   └── dev.db                    # SQLite database
+│   └── schema.prisma             # Prisma schema
 └── scripts/                      # Utility scripts
     ├── setup-database.sh         # Database setup
     └── start.sh                  # Development startup
@@ -155,10 +167,27 @@ happy-robot/
    - Copy your keys to `.env`
 
 3. **Set up database**:
+
+   **Option A: Using Docker (Recommended)**
+
    ```bash
+   cd database
+   docker-compose up -d
+   cd ..
    npx prisma generate
-   npx prisma db push
    ```
+
+   **Option B: Using Local PostgreSQL**
+
+   ```bash
+   export DATABASE_URL="postgresql://username:password@localhost:5432/happyrobot"
+   cd database
+   ./setup.sh
+   cd ..
+   npx prisma generate
+   ```
+
+   See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed instructions.
 
 ### Running Locally
 

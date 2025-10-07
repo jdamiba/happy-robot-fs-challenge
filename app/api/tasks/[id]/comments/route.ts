@@ -11,6 +11,39 @@ interface RouteParams {
   }>;
 }
 
+/**
+ * @swagger
+ * /api/tasks/{id}/comments:
+ *   get:
+ *     summary: Get all comments for a task
+ *     description: Retrieve all comments belonging to a specific task
+ *     tags: [Comments]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Task ID
+ *         example: "task_123456789"
+ *     responses:
+ *       200:
+ *         description: List of task comments
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Comment'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -32,6 +65,52 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * @swagger
+ * /api/tasks/{id}/comments:
+ *   post:
+ *     summary: Create a new comment on a task
+ *     description: Create a new comment on a specific task. The comment creation is broadcast to all connected clients in real-time.
+ *     tags: [Comments]
+ *     security:
+ *       - ClerkAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Task ID
+ *         example: "task_123456789"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateCommentRequest'
+ *     responses:
+ *       200:
+ *         description: Comment created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/Comment'
+ *                 operationId:
+ *                   type: string
+ *                   example: "op_123456789"
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -56,7 +135,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     };
 
+    console.log("Creating comment with data:", {
+      commentId: commentData.id,
+      taskId: commentData.taskId,
+      authorId: commentData.authorId,
+      content: commentData.content.substring(0, 50) + "...",
+    });
+
     const comment = await CommentService.create(commentData);
+    console.log("Comment created successfully:", {
+      id: comment.id,
+      taskId: comment.taskId,
+      authorId: comment.authorId,
+    });
 
     // Get task to find project ID for broadcasting
     const task = await TaskService.findById(id);
@@ -77,7 +168,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         console.log("Comment creation broadcast successful");
       } catch (broadcastError) {
         console.error("Failed to broadcast comment creation:", broadcastError);
+        // Don't fail the request if broadcasting fails
       }
+    } else {
+      console.error("Task not found for comment broadcasting:", id);
     }
 
     return NextResponse.json({
